@@ -209,7 +209,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else if (err.code === 'auth/popup-blocked') {
         msg = 'Sign-in popup was blocked by your browser. Please allow popups for this page.';
       } else if (err.code === 'auth/unauthorized-domain') {
-        msg = 'This domain is not authorized in Firebase Auth settings.';
+        const currentDomain = typeof window !== 'undefined' ? window.location.hostname : 'your deployed domain';
+        msg = `This domain (${currentDomain}) is not authorized in Firebase Auth settings. Please add "${currentDomain}" to Authorized Domains in Firebase Console.`;
       }
       setError(msg);
       throw new Error(msg);
