@@ -1,0 +1,6 @@
+{
+  "name": "DCPC Transport Coop",
+  "description": "Mobile-first digital passenger pass, QR verification, and bus ride subscription system for DCPC Transport Coop in Sipocot, Camarines Sur.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

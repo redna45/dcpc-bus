@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "users": {
+      "description": "User profiles and role assignments",
+      "fields": {
+        "uid": { "type": "string", "description": "Auth UID" },
+        "email": { "type": "string", "description": "Email address" },
+        "fullName": { "type": "string", "description": "Full name" },
+        "mobileNumber": { "type": "string", "description": "Phone number" },
+        "photoUrl": { "type": "string", "description": "Avatar or photo" },
+        "role": { "type": "string", "description": "passenger | cashier | checker | admin" },
+        "passengerNumber": { "type": "string", "description": "Unique format BUS-000001" },
+        "createdAt": { "type": "timestamp", "description": "Creation timestamp" },
+        "updatedAt": { "type": "timestamp", "description": "Last update timestamp" }
+      }
+    },
+    "subscriptionPlans": {
+      "description": "Subscription plans created by admin",
+      "fields": {
+        "name": { "type": "string", "description": "Plan name" },
+        "description": { "type": "string", "description": "Plan details" },
+        "price": { "type": "number", "description": "Price in PHP" },
+        "durationDays": { "type": "number", "description": "Duration in days" },
+        "isActive": { "type": "boolean", "description": "Whether plan is currently purchasable" },
+        "createdAt": { "type": "timestamp", "description": "Creation timestamp" }
+      }
+    },
+    "subscriptions": {
+      "description": "Active, pending, and expired subscription records",
+      "fields": {
+        "passengerId": { "type": "string", "description": "Passenger UID" },
+        "passengerNumber": { "type": "string", "description": "Passenger bus number" },
+        "passengerName": { "type": "string", "description": "Passenger full name" },
+        "planId": { "type": "string", "description": "Plan ID" },
+        "planNameSnapshot": { "type": "string", "description": "Plan name" },
+        "price": { "type": "number", "description": "Amount paid" },
+        "paymentMethod": { "type": "string", "description": "GCash | Cash | Manual" },
+        "paymentId": { "type": "string", "description": "Associated payment ID" },
+        "status": { "type": "string", "description": "active | expired | pending | rejected | cancelled" },
+        "startDate": { "type": "string", "description": "ISO date string" },
+        "expiryDate": { "type": "string", "description": "ISO date string" },
+        "approvedAt": { "type": "string", "description": "ISO date string" },
+        "approvedBy": { "type": "string", "description": "Staff name/UID" },
+        "createdBy": { "type": "string", "description": "Creator ID" },
+        "notes": { "type": "string", "description": "Additional notes" }
+      }
+    },
+    "payments": {
+      "description": "GCash and manual payment submissions",
+      "fields": {
+        "passengerId": { "type": "string", "description": "Passenger UID" },
+        "passengerNumber": { "type": "string", "description": "Passenger bus number" },
+        "passengerName": { "type": "string", "description": "Passenger full name" },
+        "planId": { "type": "string", "description": "Plan ID" },
+        "planName": { "type": "string", "description": "Plan name" },
+        "amount": { "type": "number", "description": "Amount" },
+        "paymentMethod": { "type": "string", "description": "GCash | Cash | Manual" },
+        "screenshotUrl": { "type": "string", "description": "Storage or base64 URL of GCash receipt" },
+        "status": { "type": "string", "description": "pending_review | approved | rejected" },
+        "submittedAt": { "type": "string", "description": "ISO timestamp" },
+        "reviewedAt": { "type": "string", "description": "ISO timestamp" },
+        "reviewedBy": { "type": "string", "description": "Staff name/UID" },
+        "rejectionReason": { "type": "string", "description": "Reason if rejected" }
+      }
+    },
+    "verifications": {
+      "description": "Checker verification event logs",
+      "fields": {
+        "passengerId": { "type": "string", "description": "Passenger UID" },
+        "passengerNumber": { "type": "string", "description": "Passenger bus number" },
+        "passengerName": { "type": "string", "description": "Passenger full name" },
+        "checkerId": { "type": "string", "description": "Checker UID" },
+        "checkerName": { "type": "string", "description": "Checker name" },
+        "result": { "type": "string", "description": "valid | expired | no_active_subscription | passenger_not_found" },
+        "timestamp": { "type": "string", "description": "ISO timestamp" },
+        "planName": { "type": "string", "description": "Plan name" },
+        "expiryDate": { "type": "string", "description": "Expiry date" }
+      }
+    },
+    "settings": {
+      "description": "Application settings (company and payment)",
+      "fields": {
+        "companyName": { "type": "string", "description": "Company title" },
+        "gcashAccountName": { "type": "string", "description": "GCash recipient name" },
+        "gcashMobileNumber": { "type": "string", "description": "GCash recipient phone" }
+      }
+    }
+  }
+}
