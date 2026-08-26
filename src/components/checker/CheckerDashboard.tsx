@@ -6,6 +6,7 @@ import { verifyPassenger } from '../../services/db';
 import { QrScannerView } from './QrScannerView';
 import { VerificationResultCard } from './VerificationResultCard';
 import { VerificationHistory } from './VerificationHistory';
+import { soundPlayer } from '../../lib/soundUtils';
 
 interface CheckerDashboardProps {
   currentView?: string;
@@ -27,12 +28,23 @@ export const CheckerDashboard: React.FC<CheckerDashboardProps> = ({ currentView 
     setIsVerifying(true);
     try {
       const result = await verifyPassenger(payload, userProfile.uid, userProfile.fullName);
+      
+      // Play distinct audio cues based on the result
+      if (result.result === 'valid') {
+        soundPlayer.playSuccessChime();
+      } else if (result.result === 'expired' || result.result === 'no_active_subscription') {
+        soundPlayer.playWarningTone();
+      } else {
+        soundPlayer.playErrorTone();
+      }
+
       setVerificationResult(result);
     } catch (err) {
       console.error('Verification error:', err);
+      soundPlayer.playErrorTone();
       setVerificationResult({
         result: 'passenger_not_found',
-        message: 'Could not complete verification.',
+        message: 'Could not complete verification. Please check network connection.',
       });
     } finally {
       setIsVerifying(false);
@@ -41,6 +53,7 @@ export const CheckerDashboard: React.FC<CheckerDashboardProps> = ({ currentView 
 
   const handleReset = () => {
     setVerificationResult(null);
+    setIsVerifying(false);
   };
 
   return (
@@ -62,19 +75,22 @@ export const CheckerDashboard: React.FC<CheckerDashboardProps> = ({ currentView 
         {/* Tab switch */}
         <div className="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
           <button
+            id="checker-tab-scanner"
             onClick={() => {
               setActiveTab('verify');
               setVerificationResult(null);
+              setIsVerifying(false);
             }}
-            className={`px-3 py-1.5 rounded-lg transition ${
+            className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
               activeTab === 'verify' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
             }`}
           >
             Scanner
           </button>
           <button
+            id="checker-tab-history"
             onClick={() => setActiveTab('history')}
-            className={`px-3 py-1.5 rounded-lg transition ${
+            className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
               activeTab === 'history' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500'
             }`}
           >

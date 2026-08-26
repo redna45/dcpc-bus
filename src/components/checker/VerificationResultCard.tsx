@@ -184,8 +184,9 @@ export const VerificationResultCard: React.FC<VerificationResultCardProps> = ({
       {/* 3. Scan Next Passenger Big Button */}
       <button
         id="scan-next-passenger-btn"
+        type="button"
         onClick={onReset}
-        className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 transition-transform active:scale-95"
+        className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer"
       >
         <RotateCcw className="w-5 h-5" />
         Scan Next Passenger

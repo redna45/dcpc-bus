@@ -703,6 +703,8 @@ export async function getAllSubscriptions(): Promise<Subscription[]> {
 // ==========================================
 // CHECKER VERIFICATION & LOGS
 // ==========================================
+const recentVerificationsCache = new Map<string, { timestamp: number; result: VerificationResultData }>();
+
 export async function verifyPassenger(
   passengerNumberOrQr: string,
   checkerUid: string,
@@ -716,6 +718,14 @@ export async function verifyPassenger(
     if (match) {
       passengerNumber = match[0].toUpperCase();
     }
+  }
+
+  // Deduplicate rapid consecutive scans within 2 seconds for the same passenger by the same checker
+  const cacheKey = `${checkerUid}_${passengerNumber}`;
+  const cached = recentVerificationsCache.get(cacheKey);
+  const currentTime = Date.now();
+  if (cached && currentTime - cached.timestamp < 2000) {
+    return cached.result;
   }
 
   const passenger = await findPassengerByNumber(passengerNumber);
@@ -735,10 +745,12 @@ export async function verifyPassenger(
       timestamp: now,
     });
 
-    return {
+    const res: VerificationResultData = {
       result: 'passenger_not_found',
       message: `No passenger registered with number ${passengerNumber}`,
     };
+    recentVerificationsCache.set(cacheKey, { timestamp: currentTime, result: res });
+    return res;
   }
 
   // Get passenger subscriptions
@@ -760,11 +772,13 @@ export async function verifyPassenger(
       expiryDate: activeSub.expiryDate,
     });
 
-    return {
+    const res: VerificationResultData = {
       result: 'valid',
       passenger,
       subscription: activeSub,
     };
+    recentVerificationsCache.set(cacheKey, { timestamp: currentTime, result: res });
+    return res;
   }
 
   // Check if there are expired subscriptions
@@ -785,12 +799,14 @@ export async function verifyPassenger(
       expiryDate: expiredSub.expiryDate,
     });
 
-    return {
+    const res: VerificationResultData = {
       result: 'expired',
       passenger,
       subscription: expiredSub,
       message: 'Subscription has expired',
     };
+    recentVerificationsCache.set(cacheKey, { timestamp: currentTime, result: res });
+    return res;
   }
 
   // No subscription at all
@@ -806,11 +822,13 @@ export async function verifyPassenger(
     timestamp: now,
   });
 
-  return {
+  const res: VerificationResultData = {
     result: 'no_active_subscription',
     passenger,
     message: 'Passenger has no active subscription',
   };
+  recentVerificationsCache.set(cacheKey, { timestamp: currentTime, result: res });
+  return res;
 }
 
 export async function getVerificationLogs(checkerId?: string): Promise<VerificationLog[]> {
