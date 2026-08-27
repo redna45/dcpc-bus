@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, getFirestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, setLogLevel } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 
@@ -19,7 +19,12 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 // Initialize Auth
 export const auth = getAuth(app);
 
-// Initialize Firestore with robust database ID support & long polling
+// Suppress transient client offline warnings from polluting error boundaries
+try {
+  setLogLevel('error');
+} catch {}
+
+// Initialize Firestore with robust database ID support & auto-detect long polling
 const dbId =
   firebaseConfigJson.firestoreDatabaseId && firebaseConfigJson.firestoreDatabaseId !== '(default)'
     ? firebaseConfigJson.firestoreDatabaseId
@@ -28,8 +33,8 @@ const dbId =
 let firestoreInstance;
 try {
   firestoreInstance = dbId
-    ? initializeFirestore(app, { experimentalForceLongPolling: true }, dbId)
-    : initializeFirestore(app, { experimentalForceLongPolling: true });
+    ? initializeFirestore(app, { experimentalAutoDetectLongPolling: true }, dbId)
+    : initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
 } catch {
   try {
     firestoreInstance = dbId ? getFirestore(app, dbId) : getFirestore(app);
@@ -44,3 +49,4 @@ export const db = firestoreInstance;
 export const storage = getStorage(app);
 
 export default app;
+

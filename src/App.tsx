@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/common/Navbar';
+import { EmailVerificationBanner } from './components/common/EmailVerificationBanner';
 import { AuthPage } from './components/auth/AuthPage';
 import { BRANDING } from './constants/branding';
 
@@ -129,6 +130,7 @@ const MainAppContent: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+      <EmailVerificationBanner />
       <Navbar currentView={currentView} onNavigate={(v) => setCurrentView(v)} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 pb-28 md:pb-8">

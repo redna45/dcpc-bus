@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Phone, Mail, Shield, Camera, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { User, Phone, Mail, Shield, Camera, Check, AlertCircle, RefreshCw, CheckCircle2, AlertTriangle, Send, KeyRound } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { updateUserProfile, uploadImage } from '../../services/db';
 import { ImageUpload } from '../common/ImageUpload';
@@ -8,13 +8,23 @@ import { updateProfile } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
 
 export const PassengerProfile: React.FC = () => {
-  const { userProfile, refreshProfile } = useAuth();
+  const { userProfile, currentUser, refreshProfile, sendVerificationEmail, reloadUser, sendPasswordReset } = useAuth();
   const [fullName, setFullName] = useState(userProfile?.fullName || '');
   const [mobileNumber, setMobileNumber] = useState(userProfile?.mobileNumber || '');
   const [photo, setPhoto] = useState<File | string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Email verification state
+  const [isSendingVerif, setIsSendingVerif] = useState(false);
+  const [isCheckingVerif, setIsCheckingVerif] = useState(false);
+  const [verifSentSuccess, setVerifSentSuccess] = useState(false);
+  const [verifNotice, setVerifNotice] = useState<string | null>(null);
+
+  // Password reset state
+  const [isSendingReset, setIsSendingReset] = useState(false);
+  const [resetNotice, setResetNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (userProfile) {
@@ -24,6 +34,58 @@ export const PassengerProfile: React.FC = () => {
   }, [userProfile?.uid, userProfile?.fullName, userProfile?.mobileNumber]);
 
   if (!userProfile) return null;
+
+  const handleSendVerification = async () => {
+    setIsSendingVerif(true);
+    setVerifNotice(null);
+    setVerifSentSuccess(false);
+    try {
+      await sendVerificationEmail();
+      setVerifSentSuccess(true);
+      setVerifNotice('Verification email sent! Check your inbox to confirm.');
+      setTimeout(() => setVerifNotice(null), 6000);
+    } catch (err: any) {
+      setVerifNotice(err.message || 'Failed to send verification email.');
+      setTimeout(() => setVerifNotice(null), 6000);
+    } finally {
+      setIsSendingVerif(false);
+    }
+  };
+
+  const handleCheckVerification = async () => {
+    setIsCheckingVerif(true);
+    setVerifNotice(null);
+    try {
+      const isVerified = await reloadUser();
+      if (isVerified) {
+        setVerifNotice('Email successfully confirmed!');
+      } else {
+        setVerifNotice('Email is not yet verified. Please click the link in your inbox.');
+      }
+      setTimeout(() => setVerifNotice(null), 5000);
+    } catch (err) {
+      setVerifNotice('Could not check status. Please try again.');
+      setTimeout(() => setVerifNotice(null), 4000);
+    } finally {
+      setIsCheckingVerif(false);
+    }
+  };
+
+  const handleSendPasswordResetInProfile = async () => {
+    if (!userProfile.email) return;
+    setIsSendingReset(true);
+    setResetNotice(null);
+    try {
+      await sendPasswordReset(userProfile.email);
+      setResetNotice(`Password reset link sent to ${userProfile.email}. Check your inbox!`);
+      setTimeout(() => setResetNotice(null), 6000);
+    } catch (err: any) {
+      setResetNotice(err.message || 'Failed to send password reset email.');
+      setTimeout(() => setResetNotice(null), 5000);
+    } finally {
+      setIsSendingReset(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +143,8 @@ export const PassengerProfile: React.FC = () => {
   const currentAvatar =
     (typeof photo === 'string' && photo.startsWith('data:') ? photo : userProfile.photoUrl) ||
     `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userProfile.fullName)}`;
+  
+  const isEmailVerified = currentUser?.emailVerified;
 
   return (
     <div className="max-w-xl mx-auto space-y-4 md:space-y-6 pb-20 md:pb-6">
@@ -88,7 +152,7 @@ export const PassengerProfile: React.FC = () => {
         <h2 className="text-lg sm:text-xl font-black text-slate-900 font-heading tracking-tight">
           Passenger Profile & Pass Info
         </h2>
-        <p className="text-xs text-slate-500">Manage your contact details and registered photo</p>
+        <p className="text-xs text-slate-500">Manage your contact details, active email, and registered photo</p>
       </div>
 
       <div className="bg-white rounded-3xl p-5 sm:p-7 border border-emerald-100 shadow-sm space-y-5">
@@ -100,12 +164,22 @@ export const PassengerProfile: React.FC = () => {
             className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-200 shadow-xs bg-slate-100 shrink-0"
             referrerPolicy="no-referrer"
           />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="font-mono text-xs font-black text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                 {passengerNumber}
               </span>
-              <span className="text-[10px] uppercase font-extrabold text-slate-400">Coop Commuter</span>
+              {isEmailVerified ? (
+                <span className="text-[10px] uppercase font-black text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                  Email Verified
+                </span>
+              ) : (
+                <span className="text-[10px] uppercase font-black text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3 text-amber-700" />
+                  Unconfirmed Email
+                </span>
+              )}
             </div>
             <h3 className="text-base font-black text-slate-900 mt-1 font-heading truncate">
               {fullName || userProfile.fullName}
@@ -114,7 +188,88 @@ export const PassengerProfile: React.FC = () => {
           </div>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-4">
+        {/* Email Verification Box */}
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-slate-600" />
+              <span className="text-xs font-bold text-slate-800">Email Confirmation Status</span>
+            </div>
+            {isEmailVerified ? (
+              <span className="text-xs font-bold text-emerald-700 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Active & Verified
+              </span>
+            ) : (
+              <span className="text-xs font-bold text-amber-700 flex items-center gap-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Pending Confirmation
+              </span>
+            )}
+          </div>
+
+          {!isEmailVerified && (
+            <div className="space-y-2 pt-1">
+              <p className="text-[11px] text-slate-600">
+                Confirming your email ensures you can recover your account password and receive trip receipts.
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  id="profile-resend-verification-btn"
+                  onClick={handleSendVerification}
+                  disabled={isSendingVerif}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Send className="w-3 h-3" />
+                  {isSendingVerif ? 'Sending...' : 'Send Verification Email'}
+                </button>
+                <button
+                  type="button"
+                  id="profile-check-verification-btn"
+                  onClick={handleCheckVerification}
+                  disabled={isCheckingVerif}
+                  className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isCheckingVerif ? 'animate-spin' : ''}`} />
+                  Refresh Status
+                </button>
+              </div>
+            </div>
+          )}
+
+          {verifNotice && (
+            <p className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 p-2 rounded-xl">
+              {verifNotice}
+            </p>
+          )}
+        </div>
+
+        {/* Password Reset Option inside Profile */}
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <KeyRound className="w-4 h-4 text-slate-600" />
+            <div>
+              <span className="text-xs font-bold text-slate-800 block leading-tight">Password Management</span>
+              <span className="text-[11px] text-slate-500">Need to update or reset your password?</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            id="profile-send-password-reset-btn"
+            onClick={handleSendPasswordResetInProfile}
+            disabled={isSendingReset}
+            className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold transition shrink-0 cursor-pointer disabled:opacity-50"
+          >
+            {isSendingReset ? 'Sending...' : 'Send Reset Link'}
+          </button>
+        </div>
+
+        {resetNotice && (
+          <p className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 p-2 rounded-xl">
+            {resetNotice}
+          </p>
+        )}
+
+        <form onSubmit={handleSave} className="space-y-4 pt-2">
           <div>
             <label className="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-1">
               Full Name
@@ -209,3 +364,4 @@ export const PassengerProfile: React.FC = () => {
     </div>
   );
 };
+

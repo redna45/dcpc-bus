@@ -8,6 +8,8 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   updateProfile,
+  sendEmailVerification,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import {
@@ -44,7 +46,10 @@ interface AuthContextType {
     mobileNumber: string;
     password: string;
     photoFileOrUrl?: File | string;
-  }) => Promise<UserProfile>;
+  }) => Promise<{ profile: UserProfile; emailVerificationSent: boolean }>;
+  sendVerificationEmail: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
+  reloadUser: () => Promise<boolean>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   switchRoleForDemo: (newRole: UserRole) => Promise<void>;
@@ -223,23 +228,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mobileNumber: string;
     password: string;
     photoFileOrUrl?: File | string;
-  }): Promise<UserProfile> => {
+  }): Promise<{ profile: UserProfile; emailVerificationSent: boolean }> => {
     setError(null);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
       const isTargetAdmin = isSuperAdminEmail(data.email);
 
-      // Handle photo upload
+      // Trigger email verification for the new user immediately
+      let emailVerificationSent = false;
+      try {
+        await sendEmailVerification(user);
+        emailVerificationSent = true;
+      } catch (verificationErr) {
+        console.warn('Could not auto-send verification email on registration:', verificationErr);
+      }
+
+      // Handle photo upload (saves to Firebase Storage or compressed base64)
       let photoUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.fullName)}`;
       if (data.photoFileOrUrl) {
         photoUrl = await uploadImage(data.photoFileOrUrl, `profiles/${user.uid}_${Date.now()}`);
       }
 
-      await updateProfile(user, {
-        displayName: data.fullName,
-        photoURL: photoUrl,
-      });
+      // Update Firebase Auth profile (photoURL must be a short valid URL, not a long data URI)
+      const authPhotoURL =
+        photoUrl && !photoUrl.startsWith('data:') && photoUrl.length <= 1500
+          ? photoUrl
+          : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.fullName)}`;
+
+      try {
+        await updateProfile(user, {
+          displayName: data.fullName,
+          photoURL: authPhotoURL,
+        });
+      } catch (authProfileErr) {
+        console.warn('Firebase Auth updateProfile non-critical notice:', authProfileErr);
+      }
 
       // Generate unique sequential passenger number (BUS-000001)
       const passengerNumber = await generatePassengerNumber();
@@ -249,13 +273,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: data.email,
         fullName: data.fullName,
         mobileNumber: data.mobileNumber,
-        photoUrl,
+        photoUrl, // Store the full photo URL or base64 in Firestore profile
         role: isTargetAdmin ? 'admin' : 'passenger',
         passengerNumber,
       });
 
       setUserProfile(newProfile);
-      return newProfile;
+      setCurrentUser(user);
+      return { profile: newProfile, emailVerificationSent };
     } catch (err: any) {
       console.error('Registration error:', err);
       let msg = 'Registration failed. Please try again.';
@@ -263,10 +288,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         msg = 'An account with this email already exists.';
       } else if (err.code === 'auth/weak-password') {
         msg = 'Password should be at least 6 characters.';
+      } else if (err.code === 'auth/invalid-email') {
+        msg = 'Please provide a valid email address.';
+      } else if (err.message) {
+        msg = err.message;
       }
       setError(msg);
       throw new Error(msg);
     }
+  };
+
+  const sendVerificationEmail = async () => {
+    if (!auth.currentUser) {
+      throw new Error('You must be signed in to request a verification email.');
+    }
+    try {
+      await sendEmailVerification(auth.currentUser);
+    } catch (err: any) {
+      console.error('Send verification email error:', err);
+      let msg = 'Failed to send verification email. Please try again later.';
+      if (err.code === 'auth/too-many-requests') {
+        msg = 'Too many requests. Please check your inbox or wait a few minutes.';
+      }
+      throw new Error(msg);
+    }
+  };
+
+  const sendPasswordReset = async (email: string) => {
+    setError(null);
+    if (!email || !email.trim()) {
+      throw new Error('Please enter your registered email address.');
+    }
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+    } catch (err: any) {
+      console.error('Password reset error:', err);
+      let msg = 'Failed to send password reset email. Please try again.';
+      if (err.code === 'auth/user-not-found') {
+        msg = 'No commuter or staff account found with this email.';
+      } else if (err.code === 'auth/invalid-email') {
+        msg = 'Please enter a valid email address.';
+      } else if (err.code === 'auth/too-many-requests') {
+        msg = 'Too many attempts. Please try again in a few minutes.';
+      }
+      setError(msg);
+      throw new Error(msg);
+    }
+  };
+
+  const reloadUser = async (): Promise<boolean> => {
+    if (auth.currentUser) {
+      try {
+        await auth.currentUser.reload();
+        setCurrentUser({ ...auth.currentUser });
+        return !!auth.currentUser.emailVerified;
+      } catch (err) {
+        console.warn('Error reloading user auth status:', err);
+      }
+    }
+    return false;
   };
 
   const logout = async () => {
@@ -305,6 +385,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         login,
         loginWithGoogle,
         registerPassenger,
+        sendVerificationEmail,
+        sendPasswordReset,
+        reloadUser,
         logout,
         refreshProfile,
         switchRoleForDemo,
