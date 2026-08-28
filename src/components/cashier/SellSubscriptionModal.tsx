@@ -55,7 +55,8 @@ export const SellSubscriptionModal: React.FC<SellSubscriptionModalProps> = ({
     setIsSearching(true);
     setError(null);
     try {
-      if (searchQuery.trim().toUpperCase().startsWith('BUS-')) {
+      const q = searchQuery.trim().toUpperCase();
+      if (q.startsWith('PAS-') || q.startsWith('BUS-')) {
         const found = await findPassengerByNumber(searchQuery.trim());
         setSearchResults(found ? [found] : []);
       } else {
@@ -132,7 +133,7 @@ export const SellSubscriptionModal: React.FC<SellSubscriptionModalProps> = ({
                 <div>
                   <h4 className="text-xs font-bold text-slate-900">{selectedPassenger.fullName}</h4>
                   <p className="text-[11px] font-mono font-bold text-indigo-700">
-                    {selectedPassenger.passengerNumber || 'BUS-000001'}
+                    {selectedPassenger.passengerNumber || 'PAS-000001'}
                   </p>
                   <p className="text-[10px] text-slate-500">{selectedPassenger.mobileNumber}</p>
                 </div>
@@ -152,7 +153,7 @@ export const SellSubscriptionModal: React.FC<SellSubscriptionModalProps> = ({
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
                   <input
                     type="text"
-                    placeholder="Search by BUS-XXXXXX, name, or phone number"
+                    placeholder="Search by PAS-XXXXXX, name, or phone number"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => {

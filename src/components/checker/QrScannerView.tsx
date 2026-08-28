@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import { Camera, CameraOff, Search, RefreshCw, AlertCircle, Sparkles } from 'lucide-react';
+import { Camera, CameraOff, Search, RefreshCw, AlertCircle, Upload, Image as ImageIcon } from 'lucide-react';
 import { soundPlayer } from '../../lib/soundUtils';
 
 interface QrScannerViewProps {
@@ -16,10 +16,12 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
   const [scannerActive, setScannerActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [isFileScanning, setIsFileScanning] = useState(false);
 
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const isLockedRef = useRef(false);
   const isMountedRef = useRef(true);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const scannerContainerId = 'qr-reader-container';
 
   const stopScannerInternal = async () => {
@@ -30,8 +32,8 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
           await scanner.stop();
         }
         await scanner.clear();
-      } catch (err) {
-        // Ignore normal cleanup errors
+      } catch {
+        // Ignore normal cleanup
       }
       html5QrCodeRef.current = null;
     }
@@ -47,7 +49,7 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
     isLockedRef.current = false;
 
     // Give DOM time to ensure container element is present
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 60));
     if (!isMountedRef.current) return;
 
     try {
@@ -79,7 +81,7 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
           if (isLockedRef.current) return;
           isLockedRef.current = true;
 
-          // 1. Play immediate single scan chirp (no loop/buzz)
+          // 1. Play immediate single scan chirp
           soundPlayer.playScanChirp();
 
           // 2. Pause video immediately to prevent further frame scans
@@ -93,7 +95,7 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
           onScanSuccess(decodedText);
         },
         () => {
-          // Frame error (normal during camera movement, ignore)
+          // Frame scan pass (normal during camera movement, ignore)
         }
       );
 
@@ -101,18 +103,58 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
         setScannerActive(true);
       }
     } catch (err: any) {
-      console.error('Camera QR start error:', err);
+      console.warn('Camera access status:', err?.name || err?.message || err);
       if (isMountedRef.current) {
-        setCameraError(
-          err?.message?.includes('NotAllowedError') || err?.name === 'NotAllowedError'
-            ? 'Camera permission was denied. Please allow camera access in your browser, or use the manual passenger number lookup below.'
-            : 'Could not access device camera. You can manually enter the passenger number below.'
-        );
+        const isPermissionIssue =
+          err?.name === 'NotAllowedError' ||
+          err?.message?.toLowerCase().includes('permission') ||
+          err?.message?.toLowerCase().includes('notallowed') ||
+          err?.message?.toLowerCase().includes('dismissed');
+
+        if (isPermissionIssue) {
+          setCameraError(
+            'Camera permission was not granted or was dismissed. You can enable camera access in your browser settings, scan a QR image, or enter the passenger ID manually below.'
+          );
+        } else {
+          setCameraError(
+            'Camera is currently unavailable. You can upload a QR image or enter the passenger ID manually below.'
+          );
+        }
         setScannerActive(false);
       }
     } finally {
       if (isMountedRef.current) {
         setIsInitializing(false);
+      }
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsFileScanning(true);
+    setCameraError(null);
+
+    try {
+      // Create a temporary instance to scan the uploaded image
+      const tempScanner = new Html5Qrcode('qr-reader-temp-file', {
+        formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+        verbose: false,
+      });
+
+      const decoded = await tempScanner.scanFile(file, true);
+      tempScanner.clear();
+      
+      soundPlayer.playScanChirp();
+      onScanSuccess(decoded);
+    } catch (err: any) {
+      console.warn('QR image decoding result:', err);
+      setCameraError('No valid QR code could be detected in the uploaded image. Please try another photo or enter the ID manually.');
+    } finally {
+      setIsFileScanning(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
     }
   };
@@ -138,6 +180,16 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Hidden file input and container for image QR decoding */}
+      <div id="qr-reader-temp-file" className="hidden"></div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
       {/* Camera Live Scanner Box */}
       <div className="bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-xl border-2 border-slate-800 text-white relative overflow-hidden">
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -149,6 +201,18 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              id="upload-qr-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isFileScanning || isVerifying}
+              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Upload QR code image"
+            >
+              <Upload className="w-3 h-3 text-amber-400" />
+              <span>{isFileScanning ? 'Scanning...' : 'Upload QR'}</span>
+            </button>
+
             {scannerActive ? (
               <button
                 type="button"
@@ -156,7 +220,7 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
                 onClick={stopScannerInternal}
                 className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition cursor-pointer"
               >
-                Pause Camera
+                Pause
               </button>
             ) : (
               <button
@@ -167,7 +231,7 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
                 className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-60"
               >
                 <RefreshCw className={`w-3 h-3 ${isInitializing ? 'animate-spin' : ''}`} />
-                Start Camera
+                <span>Retry</span>
               </button>
             )}
           </div>
@@ -203,16 +267,26 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
           )}
 
           {!scannerActive && !isInitializing && (
-            <div className="text-center p-6 space-y-2">
+            <div className="text-center p-6 space-y-3">
               <CameraOff className="w-10 h-10 text-slate-600 mx-auto" />
-              <p className="text-xs text-slate-400">Camera is paused or unavailable.</p>
-              <button
-                type="button"
-                onClick={startScanner}
-                className="px-4 py-2 bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-xs cursor-pointer"
-              >
-                Turn On Camera
-              </button>
+              <p className="text-xs text-slate-400">Camera is paused or access was dismissed.</p>
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={startScanner}
+                  className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs rounded-xl shadow-xs cursor-pointer transition"
+                >
+                  Enable Camera
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl shadow-xs cursor-pointer transition flex items-center gap-1.5"
+                >
+                  <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
+                  Upload QR Image
+                </button>
+              </div>
             </div>
           )}
 
@@ -227,12 +301,12 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
         {cameraError && (
           <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/30 text-amber-200 rounded-xl text-xs flex items-start gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
-            <span>{cameraError}</span>
+            <span className="leading-relaxed">{cameraError}</span>
           </div>
         )}
 
         <p className="text-[11px] text-slate-400 text-center mt-3">
-          Point camera at the passenger's static QR code to verify validity.
+          Point camera at the passenger's QR pass, upload a QR screenshot, or enter the ID below.
         </p>
       </div>
 
@@ -250,7 +324,7 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
             <input
               type="text"
               id="manual-passenger-number-input"
-              placeholder="e.g. BUS-000001"
+              placeholder="e.g. PAS-000001"
               value={manualInput}
               onChange={(e) => setManualInput(e.target.value.toUpperCase())}
               disabled={isVerifying}

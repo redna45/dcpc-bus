@@ -36,35 +36,66 @@ import {
 import { calculateExpiryDate, isSubscriptionActive } from '../lib/dateUtils';
 
 // ==========================================
-// DESIGNATED ID GENERATION (BUS/CSH/CHK/ADM)
+// DESIGNATED ID GENERATION (PAS/CSH/CHK/ADM)
 // ==========================================
 export async function generateDesignatedId(role: UserRole): Promise<string> {
   const prefixMap: Record<UserRole, { prefix: string; counterName: string }> = {
-    passenger: { prefix: 'BUS', counterName: 'passengers' },
+    passenger: { prefix: 'PAS', counterName: 'passengers' },
     cashier: { prefix: 'CSH', counterName: 'cashiers' },
     checker: { prefix: 'CHK', counterName: 'checkers' },
     admin: { prefix: 'ADM', counterName: 'admins' },
   };
 
-  const { prefix, counterName } = prefixMap[role] || { prefix: 'USR', counterName: 'users' };
+  const { prefix, counterName } = prefixMap[role] || { prefix: 'PAS', counterName: 'passengers' };
   const counterRef = doc(db, 'counters', counterName);
 
+  let nextNumber = 1;
+
   try {
-    const nextNumber = await runTransaction(db, async (transaction) => {
-      const counterDoc = await transaction.get(counterRef);
-      let count = 1;
-      if (counterDoc.exists()) {
-        count = (counterDoc.data().count || 0) + 1;
+    // 1. Check existing users with this prefix to find the true highest assigned sequence number in the database
+    let highestUserNumber = 0;
+    try {
+      const usersSnap = await getDocs(collection(db, 'users'));
+      for (const docSnap of usersSnap.docs) {
+        const uData = docSnap.data();
+        const idToCheck = (uData.passengerNumber || uData.designatedId || '') as string;
+        if (idToCheck.startsWith(`${prefix}-`)) {
+          const numPart = parseInt(idToCheck.replace(`${prefix}-`, ''), 10);
+          if (!isNaN(numPart) && numPart > highestUserNumber && numPart < 900000) {
+            highestUserNumber = numPart;
+          }
+        }
       }
-      transaction.set(counterRef, { count, updatedAt: new Date().toISOString() }, { merge: true });
-      return count;
-    });
+    } catch (e) {
+      console.warn('Could not scan existing users for highest sequence:', e);
+    }
+
+    // 2. Read the dedicated counter document
+    let counterValue = 0;
+    try {
+      const counterSnap = await getDoc(counterRef);
+      if (counterSnap.exists()) {
+        const data = counterSnap.data();
+        counterValue = typeof data.count === 'number' ? data.count : 0;
+      }
+    } catch (e) {
+      console.warn('Could not read counter doc:', e);
+    }
+
+    // 3. Compute the next sequential number (max of highest existing user ID + 1 or counter + 1)
+    nextNumber = Math.max(highestUserNumber + 1, counterValue > 0 ? counterValue + 1 : 1);
+
+    // 4. Save the updated counter back to Firestore
+    try {
+      await setDoc(counterRef, { count: nextNumber, updatedAt: new Date().toISOString() }, { merge: true });
+    } catch (e) {
+      console.warn('Could not update counter doc:', e);
+    }
 
     return `${prefix}-${String(nextNumber).padStart(6, '0')}`;
   } catch (error) {
-    console.warn(`Transaction counter for ${role} failed, using sequential fallback:`, error);
-    const randomSuffix = Math.floor(100000 + Math.random() * 900000);
-    return `${prefix}-${randomSuffix}`;
+    console.warn(`Sequential ID generation error for ${role}:`, error);
+    return `${prefix}-${String(nextNumber).padStart(6, '0')}`;
   }
 }
 
@@ -232,7 +263,7 @@ export async function createUserByAdmin(data: {
     uid = `user_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
   }
 
-  // Always designate a sequential formatted ID based on role (BUS-000001, CSH-000001, CHK-000001, ADM-000001)
+  // Always designate a sequential formatted ID based on role (PAS-000001, CSH-000001, CHK-000001, ADM-000001)
   const designatedId = await generateDesignatedId(data.role);
 
   const photoUrl =
@@ -611,7 +642,7 @@ export async function sellSubscriptionManually(data: {
   const subscription: Subscription = {
     id: subRef.id,
     passengerId: data.passenger.uid,
-    passengerNumber: data.passenger.passengerNumber || 'BUS-000000',
+    passengerNumber: data.passenger.passengerNumber || 'PAS-000000',
     passengerName: data.passenger.fullName,
     planId: data.plan.id,
     planNameSnapshot: data.plan.name,
@@ -634,7 +665,7 @@ export async function sellSubscriptionManually(data: {
   await setDoc(paymentRef, {
     id: paymentRef.id,
     passengerId: data.passenger.uid,
-    passengerNumber: data.passenger.passengerNumber || 'BUS-000000',
+    passengerNumber: data.passenger.passengerNumber || 'PAS-000000',
     passengerName: data.passenger.fullName,
     planId: data.plan.id,
     planName: data.plan.name,
@@ -713,8 +744,8 @@ export async function verifyPassenger(
   const rawInput = passengerNumberOrQr.trim();
   // Strip any prefix if scanner captured a URL or extra text
   let passengerNumber = rawInput;
-  if (rawInput.includes('BUS-')) {
-    const match = rawInput.match(/BUS-\d+/i);
+  if (rawInput.includes('PAS-') || rawInput.includes('BUS-')) {
+    const match = rawInput.match(/(PAS|BUS)-\d+/i);
     if (match) {
       passengerNumber = match[0].toUpperCase();
     }
@@ -862,7 +893,7 @@ export const DEFAULT_GCASH_SETTINGS: GCashSettings = {
   gcashAccountName: 'DCPC TRANSPORT COOP',
   gcashMobileNumber: '0917-888-2877',
   paymentInstructions:
-    '1. Open GCash app and tap Send Money -> Express Send.\n2. Enter our GCash number and the exact subscription amount.\n3. In the message box, enter your Passenger Number (e.g. BUS-000001).\n4. Take a clear screenshot of the completed transaction receipt.\n5. Upload the screenshot below to activate your subscription upon cashier review.',
+    '1. Open GCash app and tap Send Money -> Express Send.\n2. Enter our GCash number and the exact subscription amount.\n3. In the message box, enter your Passenger Number (e.g. PAS-000001).\n4. Take a clear screenshot of the completed transaction receipt.\n5. Upload the screenshot below to activate your subscription upon cashier review.',
 };
 
 export async function getCompanySettings(): Promise<CompanySettings> {
@@ -963,3 +994,179 @@ export async function seedInitialDatabaseIfEmpty(): Promise<void> {
     console.warn('Seed operation error (may be fine if already initialized):', error);
   }
 }
+
+// ==========================================
+// FACTORY RESET & DATABASE PURGE
+// ==========================================
+export async function restoreFactorySettings(preservedSuperAdminEmail = 'sanderbedana1@gmail.com'): Promise<{
+  deletedUsersCount: number;
+  deletedSubsCount: number;
+  deletedPaymentsCount: number;
+  deletedVerifsCount: number;
+  deletedCountersCount: number;
+  deletedPlansCount: number;
+  errors: string[];
+}> {
+  const normEmail = preservedSuperAdminEmail.trim().toLowerCase();
+  const errors: string[] = [];
+
+  let deletedUsersCount = 0;
+  let deletedSubsCount = 0;
+  let deletedPaymentsCount = 0;
+  let deletedVerifsCount = 0;
+  let deletedCountersCount = 0;
+  let deletedPlansCount = 0;
+
+  // 1. Delete all users except super admin
+  try {
+    const usersSnap = await getDocs(collection(db, 'users'));
+    for (const uDoc of usersSnap.docs) {
+      const data = uDoc.data();
+      const userEmail = (data.email || '').trim().toLowerCase();
+      if (userEmail === normEmail) {
+        // Keep and sanitize super admin to pristine admin role
+        await setDoc(
+          doc(db, 'users', uDoc.id),
+          {
+            ...data,
+            role: 'admin',
+            designatedId: data.designatedId || 'ADM-000001',
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      } else {
+        await deleteDoc(uDoc.ref);
+        deletedUsersCount++;
+      }
+    }
+  } catch (err: any) {
+    console.error('Error clearing users during factory reset:', err);
+    errors.push(`Users reset error: ${err?.message || err}`);
+  }
+
+  // 2. Clear all subscriptions
+  try {
+    const subsSnap = await getDocs(collection(db, 'subscriptions'));
+    for (const s of subsSnap.docs) {
+      await deleteDoc(s.ref);
+      deletedSubsCount++;
+    }
+  } catch (err: any) {
+    console.error('Error clearing subscriptions during factory reset:', err);
+    errors.push(`Subscriptions reset error: ${err?.message || err}`);
+  }
+
+  // 3. Clear all payments
+  try {
+    const paymentsSnap = await getDocs(collection(db, 'payments'));
+    for (const p of paymentsSnap.docs) {
+      await deleteDoc(p.ref);
+      deletedPaymentsCount++;
+    }
+  } catch (err: any) {
+    console.error('Error clearing payments during factory reset:', err);
+    errors.push(`Payments reset error: ${err?.message || err}`);
+  }
+
+  // 4. Clear all verifications
+  try {
+    const verifSnap = await getDocs(collection(db, 'verifications'));
+    for (const v of verifSnap.docs) {
+      await deleteDoc(v.ref);
+      deletedVerifsCount++;
+    }
+  } catch (err: any) {
+    console.error('Error clearing verifications during factory reset:', err);
+    errors.push(`Verifications reset error: ${err?.message || err}`);
+  }
+
+  // 5. Reset all sequential ID counters
+  try {
+    const countersSnap = await getDocs(collection(db, 'counters'));
+    for (const c of countersSnap.docs) {
+      await deleteDoc(c.ref);
+      deletedCountersCount++;
+    }
+    const now = new Date().toISOString();
+    await setDoc(doc(db, 'counters', 'passengers'), { count: 0, updatedAt: now });
+    await setDoc(doc(db, 'counters', 'cashiers'), { count: 0, updatedAt: now });
+    await setDoc(doc(db, 'counters', 'checkers'), { count: 0, updatedAt: now });
+    await setDoc(doc(db, 'counters', 'admins'), { count: 1, updatedAt: now });
+  } catch (err: any) {
+    console.error('Error resetting counters during factory reset:', err);
+    errors.push(`Counters reset error: ${err?.message || err}`);
+  }
+
+  // 6. Reset plans to default factory list
+  try {
+    const plansSnap = await getDocs(collection(db, 'subscriptionPlans'));
+    for (const p of plansSnap.docs) {
+      await deleteDoc(p.ref);
+      deletedPlansCount++;
+    }
+    const samplePlans = [
+      {
+        name: 'Day Pass Unlimited',
+        description: 'Unlimited bus rides across all city express routes for 24 hours.',
+        price: 60,
+        durationDays: 1,
+        isActive: true,
+      },
+      {
+        name: 'Weekly Commuter Pass',
+        description: '7-day unli-ride pass ideal for weekday office commuters.',
+        price: 350,
+        durationDays: 7,
+        isActive: true,
+      },
+      {
+        name: 'Monthly Express Pass',
+        description: '30-day comprehensive pass with priority boarding on all city lines.',
+        price: 1350,
+        durationDays: 30,
+        isActive: true,
+      },
+      {
+        name: 'Quarterly Transit Pass',
+        description: '90-day discounted seasonal pass for frequent bus riders.',
+        price: 3600,
+        durationDays: 90,
+        isActive: true,
+      },
+      {
+        name: 'Annual VIP Pass',
+        description: '365-day all-access bus pass with maximum savings and free replacement ID.',
+        price: 12000,
+        durationDays: 365,
+        isActive: true,
+      },
+    ];
+    for (const p of samplePlans) {
+      await createSubscriptionPlan(p);
+    }
+  } catch (err: any) {
+    console.error('Error recreating default plans:', err);
+    errors.push(`Plans recreation error: ${err?.message || err}`);
+  }
+
+  // 7. Reset company and GCash payment settings
+  try {
+    await updateCompanySettings(DEFAULT_COMPANY_SETTINGS);
+    await updateGCashSettings(DEFAULT_GCASH_SETTINGS);
+  } catch (err: any) {
+    console.error('Error resetting settings:', err);
+    errors.push(`Settings reset error: ${err?.message || err}`);
+  }
+
+  return {
+    deletedUsersCount,
+    deletedSubsCount,
+    deletedPaymentsCount,
+    deletedVerifsCount,
+    deletedCountersCount,
+    deletedPlansCount,
+    errors,
+  };
+}
+

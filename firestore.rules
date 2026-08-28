@@ -49,7 +49,7 @@ service cloud.firestore {
       allow delete: if isAuthenticated();
     }
 
-    // Counters for generating unique IDs (BUS-000001, CSH-000001, etc.)
+    // Counters for generating unique IDs (PAS-000001, CSH-000001, etc.)
     match /counters/{counterId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();

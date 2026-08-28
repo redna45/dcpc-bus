@@ -139,7 +139,7 @@ export const PassengerProfile: React.FC = () => {
     }
   };
 
-  const passengerNumber = userProfile.passengerNumber || 'BUS-000001';
+  const passengerNumber = userProfile.passengerNumber || 'PAS-000001';
   const currentAvatar =
     (typeof photo === 'string' && photo.startsWith('data:') ? photo : userProfile.photoUrl) ||
     `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userProfile.fullName)}`;

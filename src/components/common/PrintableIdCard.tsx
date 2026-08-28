@@ -23,7 +23,7 @@ export const PrintableIdCard: React.FC<PrintableIdCardProps> = ({
     window.print();
   };
 
-  const passengerNumber = passenger.passengerNumber || 'BUS-000001';
+  const passengerNumber = passenger.passengerNumber || 'PAS-000001';
 
   return (
     <div className="space-y-4">

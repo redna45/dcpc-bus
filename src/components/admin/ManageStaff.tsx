@@ -261,7 +261,7 @@ export const ManageStaff: React.FC = () => {
         return { prefix: 'ADM-XXXXXX', label: 'Admin ID' };
       case 'passenger':
       default:
-        return { prefix: 'BUS-XXXXXX', label: 'Passenger ID' };
+        return { prefix: 'PAS-XXXXXX', label: 'Passenger ID' };
     }
   };
 
@@ -622,7 +622,7 @@ export const ManageStaff: React.FC = () => {
                   {newUserData.role === 'checker' &&
                     '✓ Will be assigned a Checker ID (e.g. CHK-000001). Can scan passenger QR passes and verify validity.'}
                   {newUserData.role === 'passenger' &&
-                    '✓ Will be assigned a Passenger ID (e.g. BUS-000001). Can view their digital QR pass and buy plans.'}
+                    '✓ Will be assigned a Passenger ID (e.g. PAS-000001). Can view their digital QR pass and buy plans.'}
                   {newUserData.role === 'admin' &&
                     '✓ Will be assigned an Admin ID (e.g. ADM-000001). Full system access across all views.'}
                 </p>

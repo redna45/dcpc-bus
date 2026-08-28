@@ -99,7 +99,7 @@ export const PassengerLookup: React.FC = () => {
         <div>
           <h2 className="text-xl font-black text-slate-900 tracking-tight">Passenger Directory & Search</h2>
           <p className="text-xs text-slate-500">
-            Search riders by passenger number (BUS-XXXXXX), full name, or phone number.
+            Search riders by passenger number (PAS-XXXXXX), full name, or phone number.
           </p>
         </div>
 
@@ -161,7 +161,7 @@ export const PassengerLookup: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className="font-mono text-xs font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
-                        {p.passengerNumber || 'BUS-000000'}
+                        {p.passengerNumber || 'PAS-000000'}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-medium text-slate-700">{p.mobileNumber}</td>
@@ -296,7 +296,7 @@ export const PassengerLookup: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Passenger ID:</span>
                 <span className="font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">
-                  {passengerToDelete.passengerNumber || 'BUS-000000'}
+                  {passengerToDelete.passengerNumber || 'PAS-000000'}
                 </span>
               </div>
               <div className="flex items-center justify-between">

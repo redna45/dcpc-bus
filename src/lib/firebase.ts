@@ -19,12 +19,12 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 // Initialize Auth
 export const auth = getAuth(app);
 
-// Suppress transient client offline warnings from polluting error boundaries
+// Suppress transient client connection warnings from polluting error boundaries
 try {
-  setLogLevel('error');
+  setLogLevel('silent');
 } catch {}
 
-// Initialize Firestore with robust database ID support & auto-detect long polling
+// Initialize Firestore with robust database ID support & forced long polling for iframe reliability
 const dbId =
   firebaseConfigJson.firestoreDatabaseId && firebaseConfigJson.firestoreDatabaseId !== '(default)'
     ? firebaseConfigJson.firestoreDatabaseId
@@ -33,8 +33,8 @@ const dbId =
 let firestoreInstance;
 try {
   firestoreInstance = dbId
-    ? initializeFirestore(app, { experimentalAutoDetectLongPolling: true }, dbId)
-    : initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+    ? initializeFirestore(app, { experimentalForceLongPolling: true }, dbId)
+    : initializeFirestore(app, { experimentalForceLongPolling: true });
 } catch {
   try {
     firestoreInstance = dbId ? getFirestore(app, dbId) : getFirestore(app);

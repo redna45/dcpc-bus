@@ -181,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       let profile = await getUserProfile(user.uid);
       if (!profile) {
-        // Automatically generate unique sequential passenger number (BUS-000001) for new Google sign-in passenger
+        // Automatically generate unique sequential passenger number (PAS-000001) for new Google sign-in passenger
         const passengerNumber = await generatePassengerNumber();
         const fallbackName = user.displayName || user.email?.split('@')[0] || (isTargetAdmin ? 'Administrator' : 'Bus Rider');
         const fallbackPhoto = user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.uid)}`;
@@ -265,7 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.warn('Firebase Auth updateProfile non-critical notice:', authProfileErr);
       }
 
-      // Generate unique sequential passenger number (BUS-000001)
+      // Generate unique sequential passenger number (PAS-000001)
       const passengerNumber = await generatePassengerNumber();
 
       const newProfile = await createUserProfile({

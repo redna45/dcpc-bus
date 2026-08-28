@@ -124,7 +124,7 @@ export const VerificationResultCard: React.FC<VerificationResultCardProps> = ({
               {passenger.fullName}
             </h3>
             <div className="font-mono text-base font-black text-indigo-700 bg-indigo-50 px-3 py-1 rounded-xl border border-indigo-200 inline-block mt-1">
-              {passenger.passengerNumber || 'BUS-000000'}
+              {passenger.passengerNumber || 'PAS-000000'}
             </div>
           </div>
 

@@ -34,7 +34,7 @@ export const MyQrCard: React.FC<MyQrCardProps> = ({ onNavigate }) => {
 
   if (!userProfile) return null;
 
-  const passengerNumber = userProfile.passengerNumber || 'BUS-000001';
+  const passengerNumber = userProfile.passengerNumber || 'PAS-000001';
   const hasActivePass = activeSub && isSubscriptionActive(activeSub);
   const daysLeft = activeSub?.expiryDate ? getRemainingDays(activeSub.expiryDate) : 0;
   const companyName = companySettings?.companyName || BRANDING.name;

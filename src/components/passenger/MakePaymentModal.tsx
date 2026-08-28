@@ -55,7 +55,7 @@ export const MakePaymentModal: React.FC<MakePaymentModalProps> = ({
     try {
       await submitGCashPayment({
         passengerId: userProfile.uid,
-        passengerNumber: userProfile.passengerNumber || 'BUS-000001',
+        passengerNumber: userProfile.passengerNumber || 'PAS-000001',
         passengerName: userProfile.fullName,
         planId: plan.id,
         planName: plan.name,
@@ -83,7 +83,7 @@ export const MakePaymentModal: React.FC<MakePaymentModalProps> = ({
     }
   };
 
-  const passengerNumber = userProfile.passengerNumber || 'BUS-000001';
+  const passengerNumber = userProfile.passengerNumber || 'PAS-000001';
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Subscribe via GCash Payment" maxWidth="lg">
