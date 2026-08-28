@@ -193,6 +193,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onSaved }) => {
 
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                Official Email Address
+              </label>
+              <input
+                type="email"
+                value={companySettings.email || ''}
+                onChange={(e) =>
+                  setCompanySettings({ ...companySettings, email: e.target.value })
+                }
+                placeholder="dcpctransport@gmail.com"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                 Main Bus Terminal / Office Address
               </label>
               <input

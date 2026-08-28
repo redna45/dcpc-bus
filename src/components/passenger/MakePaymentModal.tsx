@@ -96,7 +96,7 @@ export const MakePaymentModal: React.FC<MakePaymentModalProps> = ({
             </span>
             <h4 className="text-base font-black text-white font-heading">{plan.name}</h4>
             <p className="text-xs text-slate-300">
-              Valid for {plan.durationDays} {plan.durationDays === 1 ? 'day' : 'days'} unli-rides in Sipocot network
+              Valid for {plan.durationDays} {plan.durationDays === 1 ? 'day' : 'days'} unli-rides across DCPC routes
             </p>
           </div>
           <div className="text-right">

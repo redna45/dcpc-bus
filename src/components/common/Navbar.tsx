@@ -115,12 +115,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1.5">
                     <span className="font-extrabold text-sm md:text-base text-slate-900 tracking-tight leading-tight">
-                      DCPC <span className="text-emerald-600 font-black">Transport</span>
+                      DCPC <span className="text-emerald-600 font-black">BAPAGTRANSCO</span>
                     </span>
                   </div>
                   <div className="flex items-center gap-1 text-[10px] text-slate-500 font-bold">
                     <MapPin className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
-                    <span className="truncate max-w-[140px] sm:max-w-[220px]">Sipocot, Camarines Sur</span>
+                    <span className="truncate max-w-[140px] sm:max-w-[220px]">Naga City, Camarines Sur</span>
                   </div>
                 </div>
               </button>

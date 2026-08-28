@@ -88,10 +88,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             <Shield className="w-3.5 h-3.5" /> Executive Administration Portal
           </div>
           <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-            {userProfile ? 'DCPC Transport Coop Control' : 'Transit Administration'}
+            {userProfile ? 'DCPC BAPAGTRANSCO Control' : 'Transit Administration'}
           </h2>
           <p className="text-xs text-slate-300 mt-1 max-w-xl">
-            Live overview of Sipocot bus commuter passes, cashier GCash approval pipelines, revenue metrics, and checker scans.
+            Live overview of Bagong Pag-Asa Transport Cooperative commuter passes, cashier GCash pipelines, revenue, and checker scans.
           </p>
         </div>
 

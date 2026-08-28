@@ -213,7 +213,7 @@ export const PassengerDashboard: React.FC<PassengerDashboardProps> = ({ onNaviga
               <Bus className="w-6 h-6 stroke-[2.2]" />
             </div>
             <span className="text-[11px] sm:text-xs font-bold text-slate-800 group-hover:text-amber-700 leading-tight">
-              Sipocot Routes
+              Coop Routes
             </span>
           </button>
         </div>
@@ -248,7 +248,7 @@ export const PassengerDashboard: React.FC<PassengerDashboardProps> = ({ onNaviga
                   </span>
                   <h4 className="text-lg font-black text-slate-900 font-heading">{activeSub.planNameSnapshot}</h4>
                   <p className="text-xs text-slate-600 mt-0.5">
-                    Valid on all <span className="font-semibold text-emerald-700">DCPC Sipocot Coop Modern Buses</span>
+                    Valid on all <span className="font-semibold text-emerald-700">DCPC BAPAGTRANSCO Modern Buses</span>
                   </p>
                 </div>
 
@@ -285,7 +285,7 @@ export const PassengerDashboard: React.FC<PassengerDashboardProps> = ({ onNaviga
               <div className="px-4">
                 <h4 className="text-sm font-extrabold text-slate-900 font-heading">No Active Commuter Pass</h4>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-                  Enjoy unlimited daily, weekly, or monthly rides across Sipocot, Naga, and Libmanan with DCPC Transport Coop passes.
+                  Enjoy unlimited daily, weekly, or monthly rides across Naga City, Del Rosario, and Bicol networks with DCPC passes.
                 </p>
               </div>
               <button
@@ -304,7 +304,7 @@ export const PassengerDashboard: React.FC<PassengerDashboardProps> = ({ onNaviga
           <div className="w-full flex items-center justify-between pb-2 border-b border-slate-100">
             <span className="text-xs font-extrabold text-slate-800 font-heading">Boarding Pass QR</span>
             <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-              SIPOCOT
+              NAGA CITY
             </span>
           </div>
 
@@ -434,8 +434,8 @@ export const PassengerDashboard: React.FC<PassengerDashboardProps> = ({ onNaviga
                   <Bus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-base font-black text-slate-900 font-heading">DCPC Sipocot Routes</h4>
-                  <p className="text-xs text-slate-500">Official Transport Coop Network</p>
+                  <h4 className="text-base font-black text-slate-900 font-heading">DCPC BAPAGTRANSCO Routes</h4>
+                  <p className="text-xs text-slate-500">Bagong Pag-Asa Transport Cooperative Network</p>
                 </div>
               </div>
               <button
@@ -466,7 +466,8 @@ export const PassengerDashboard: React.FC<PassengerDashboardProps> = ({ onNaviga
 
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 text-xs text-slate-500 space-y-1">
               <p className="font-bold text-slate-800">Operating Hours: {BRANDING.operatingHours}</p>
-              <p>Terminal: Sipocot Central Bus Station, Camarines Sur</p>
+              <p>Terminal: {BRANDING.fullAddress}</p>
+              <p>Email: {BRANDING.email} • Hotline: {BRANDING.contactNumber}</p>
             </div>
 
             <button

@@ -86,7 +86,9 @@ export interface CompanySettings {
   logoUrl?: string;
   contactNumber: string;
   address: string;
+  email?: string;
   website?: string;
+  tagline?: string;
 }
 
 export interface GCashSettings {

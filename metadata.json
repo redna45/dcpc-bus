@@ -1,6 +1,6 @@
 {
-  "name": "DCPC Transport Coop",
-  "description": "Mobile-first digital passenger pass, QR verification, and bus ride subscription system for DCPC Transport Coop in Sipocot, Camarines Sur.",
+  "name": "DCPC - BAGONG PAG-ASA TRANSPORT COOPERATIVE",
+  "description": "Mobile-first digital passenger pass, QR verification, and bus ride subscription system for DCPC Bagong Pag-Asa Transport Cooperative in Naga City.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

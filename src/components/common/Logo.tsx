@@ -67,11 +67,11 @@ export const Logo: React.FC<LogoProps> = ({
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5">
             <span className={`font-black text-sm tracking-tight leading-tight uppercase font-heading ${textClasses.title}`}>
-              DCPC <span className="text-emerald-600">Transport Coop</span>
+              DCPC <span className="text-emerald-600">BAPAGTRANSCO</span>
             </span>
           </div>
-          <span className={`text-[10px] font-bold tracking-wider uppercase ${textClasses.subtitle}`}>
-            {BRANDING.location}
+          <span className={`text-[10px] font-bold tracking-wider uppercase truncate max-w-[200px] sm:max-w-[260px] ${textClasses.subtitle}`}>
+            Bagong Pag-Asa Transport Coop • EST. 2021
           </span>
         </div>
       )}

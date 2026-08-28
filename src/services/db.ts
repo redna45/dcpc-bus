@@ -883,17 +883,19 @@ export async function getVerificationLogs(checkerId?: string): Promise<Verificat
 // SETTINGS (COMPANY & GCASH)
 // ==========================================
 export const DEFAULT_COMPANY_SETTINGS: CompanySettings = {
-  companyName: 'DCPC Transport Coop',
-  contactNumber: '+63 917 888 2877',
-  address: 'Sipocot Central Terminal, Sipocot, Camarines Sur',
-  website: 'https://dcpc-transport.ph',
+  companyName: 'DCPC - BAGONG PAG-ASA TRANSPORT COOPERATIVE',
+  contactNumber: '09123427581',
+  address: 'PAG-ASA ST VCS DEL ROSARIO NAGA CITY',
+  email: 'dcpctransport@gmail.com',
+  website: 'https://dcpctransport.ph',
+  tagline: 'BAGONG PAG-ASA TRANSPORT COOPERATIVE (EST. 2021)',
 };
 
 export const DEFAULT_GCASH_SETTINGS: GCashSettings = {
-  gcashAccountName: 'DCPC TRANSPORT COOP',
-  gcashMobileNumber: '0917-888-2877',
+  gcashAccountName: 'DCPC BAPAGTRANSCO',
+  gcashMobileNumber: '09123427581',
   paymentInstructions:
-    '1. Open GCash app and tap Send Money -> Express Send.\n2. Enter our GCash number and the exact subscription amount.\n3. In the message box, enter your Passenger Number (e.g. PAS-000001).\n4. Take a clear screenshot of the completed transaction receipt.\n5. Upload the screenshot below to activate your subscription upon cashier review.',
+    '1. Open GCash app and tap Send Money -> Express Send.\n2. Enter our GCash number (09123427581) and the exact subscription amount.\n3. In the message box, enter your Passenger Number (e.g. PAS-000001).\n4. Take a clear screenshot of the completed transaction receipt.\n5. Upload the screenshot below to activate your subscription upon cashier review.',
 };
 
 export async function getCompanySettings(): Promise<CompanySettings> {
