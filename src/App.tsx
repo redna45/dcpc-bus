@@ -115,6 +115,7 @@ const MainAppContent: React.FC = () => {
             return <AllSubscriptions />;
           case 'logs':
           case 'scan-logs':
+          case 'verifications':
             return <VerificationLogsView />;
           case 'settings':
             return <SettingsView />;

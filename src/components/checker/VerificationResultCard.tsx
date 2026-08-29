@@ -9,9 +9,11 @@ import {
   ShieldCheck,
   User,
   Clock,
+  Bus,
 } from 'lucide-react';
 import { VerificationResultData } from '../../types';
 import { formatDate, getRemainingDays } from '../../lib/dateUtils';
+import { BRANDING } from '../../constants/branding';
 
 interface VerificationResultCardProps {
   data: VerificationResultData;
@@ -22,7 +24,7 @@ export const VerificationResultCard: React.FC<VerificationResultCardProps> = ({
   data,
   onReset,
 }) => {
-  const { result, passenger, subscription, message } = data;
+  const { result, passenger, subscription, busNumber, message } = data;
 
   const daysLeft = subscription?.expiryDate ? getRemainingDays(subscription.expiryDate) : 0;
 
@@ -93,9 +95,30 @@ export const VerificationResultCard: React.FC<VerificationResultCardProps> = ({
   };
 
   return (
-    <div className="max-w-md mx-auto space-y-5 animate-in fade-in">
+    <div className="max-w-md mx-auto space-y-4 animate-in fade-in">
       {/* 1. Large Unmistakable Status Banner */}
       {renderStatusBanner()}
+
+      {/* Bus Unit & Route Verification Banner */}
+      <div className="bg-slate-900 text-white rounded-2xl p-3.5 flex items-center justify-between border border-slate-800 shadow-xs text-xs">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black">
+            <Bus className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 uppercase font-bold block">Assigned Bus Unit</span>
+            <span className="font-black text-amber-300 tracking-wide font-mono text-sm">
+              {busNumber || 'BUS-01'}
+            </span>
+          </div>
+        </div>
+        <div className="text-right">
+          <span className="text-[10px] text-slate-400 uppercase font-bold block">Route</span>
+          <span className="font-bold text-slate-200 truncate max-w-[170px] block">
+            Del Rosario – Centro
+          </span>
+        </div>
+      </div>
 
       {/* 2. Passenger Identification Card */}
       {passenger ? (

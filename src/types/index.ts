@@ -75,10 +75,12 @@ export interface VerificationLog {
   passengerName: string;
   checkerId: string;
   checkerName: string;
+  busNumber?: string;
   result: VerificationResultType;
   timestamp: string;
   planName?: string;
   expiryDate?: string;
+  notes?: string;
 }
 
 export interface CompanySettings {
@@ -102,5 +104,6 @@ export interface VerificationResultData {
   result: VerificationResultType;
   passenger?: UserProfile;
   subscription?: Subscription;
+  busNumber?: string;
   message?: string;
 }

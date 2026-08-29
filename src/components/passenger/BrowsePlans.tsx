@@ -35,7 +35,7 @@ export const BrowsePlans: React.FC<BrowsePlansProps> = ({ onNavigate, onSelectPl
             Choose Your Unli-Ride Pass
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Enjoy unlimited bus rides across Naga City, Del Rosario, and Bicol networks. Fast approval via GCash reference payment.
+            Enjoy unlimited bus rides along the Del Rosario – Concepcion – Panganiban – Centro line. Fast approval via GCash reference payment.
           </p>
         </div>
       </div>

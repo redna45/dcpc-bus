@@ -158,18 +158,38 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       </div>
 
       {/* Quick Navigation Modules */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div
+          id="admin-nav-verifications"
+          onClick={() => onNavigate('verifications')}
+          className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-amber-400 shadow-xs hover:shadow-md cursor-pointer transition flex items-center justify-between group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
+              <Scan className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 group-hover:text-amber-600 transition">
+                Checker Scan Logs
+              </h4>
+              <p className="text-xs text-slate-500">Audit checker bus activity</p>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />
+        </div>
+
+        <div
+          id="admin-nav-payments"
           onClick={() => onNavigate('payments')}
           className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-indigo-400 shadow-xs hover:shadow-md cursor-pointer transition flex items-center justify-between group"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center font-bold">
               <Clock className="w-5 h-5" />
             </div>
             <div>
               <h4 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition">
-                GCash Payment Approvals
+                GCash Approvals
               </h4>
               <p className="text-xs text-slate-500">{pendingPayments.length} pending review</p>
             </div>
@@ -178,15 +198,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         </div>
 
         <div
+          id="admin-nav-passengers"
           onClick={() => onNavigate('passengers')}
-          className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-indigo-400 shadow-xs hover:shadow-md cursor-pointer transition flex items-center justify-between group"
+          className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-blue-400 shadow-xs hover:shadow-md cursor-pointer transition flex items-center justify-between group"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center font-bold">
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition">
+              <h4 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition">
                 Passenger Database
               </h4>
               <p className="text-xs text-slate-500">{passengers.length} riders registered</p>
@@ -196,18 +217,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
         </div>
 
         <div
+          id="admin-nav-staff"
           onClick={() => onNavigate('staff')}
-          className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-indigo-400 shadow-xs hover:shadow-md cursor-pointer transition flex items-center justify-between group"
+          className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-purple-400 shadow-xs hover:shadow-md cursor-pointer transition flex items-center justify-between group"
         >
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center font-bold">
               <Shield className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition">
-                Staff & Roles Management
+              <h4 className="text-sm font-bold text-slate-900 group-hover:text-purple-600 transition">
+                Staff & Roles
               </h4>
-              <p className="text-xs text-slate-500">Cashiers, Checkers & Admins</p>
+              <p className="text-xs text-slate-500">Cashiers, Checkers, Admins</p>
             </div>
           </div>
           <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 transition-transform" />

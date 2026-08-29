@@ -75,7 +75,7 @@ export const AuthPage: React.FC = () => {
           </div>
           <div className="p-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xs">
             <ShieldCheck className="w-4 h-4 mx-auto text-emerald-400 mb-1" />
-            <span className="font-semibold">Naga City Routes</span>
+            <span className="font-semibold">Del Rosario - Centro Line</span>
           </div>
         </div>
       </div>

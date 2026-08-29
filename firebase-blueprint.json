@@ -71,10 +71,12 @@
         "passengerName": { "type": "string", "description": "Passenger full name" },
         "checkerId": { "type": "string", "description": "Checker UID" },
         "checkerName": { "type": "string", "description": "Checker name" },
+        "busNumber": { "type": "string", "description": "Assigned bus unit number (e.g., BUS-01, BUS-102)" },
         "result": { "type": "string", "description": "valid | expired | no_active_subscription | passenger_not_found" },
         "timestamp": { "type": "string", "description": "ISO timestamp" },
         "planName": { "type": "string", "description": "Plan name" },
-        "expiryDate": { "type": "string", "description": "Expiry date" }
+        "expiryDate": { "type": "string", "description": "Expiry date" },
+        "notes": { "type": "string", "description": "Additional remarks or route info" }
       }
     },
     "settings": {

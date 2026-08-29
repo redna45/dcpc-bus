@@ -1,16 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import { Camera, CameraOff, Search, RefreshCw, AlertCircle, Upload, Image as ImageIcon } from 'lucide-react';
+import { Camera, CameraOff, Search, RefreshCw, AlertCircle, Upload, Image as ImageIcon, Bus } from 'lucide-react';
 import { soundPlayer } from '../../lib/soundUtils';
 
 interface QrScannerViewProps {
   onScanSuccess: (decodedText: string) => void;
   isVerifying: boolean;
+  activeBusNumber?: string;
+  onChangeBus?: () => void;
 }
 
 export const QrScannerView: React.FC<QrScannerViewProps> = ({
   onScanSuccess,
   isVerifying,
+  activeBusNumber = 'BUS-01',
+  onChangeBus,
 }) => {
   const [manualInput, setManualInput] = useState('');
   const [scannerActive, setScannerActive] = useState(false);
@@ -192,6 +196,27 @@ export const QrScannerView: React.FC<QrScannerViewProps> = ({
 
       {/* Camera Live Scanner Box */}
       <div className="bg-slate-900 rounded-3xl p-4 sm:p-6 shadow-xl border-2 border-slate-800 text-white relative overflow-hidden">
+        {/* Active Bus Bar */}
+        <div className="mb-3 px-3 py-2 bg-slate-800/80 rounded-xl flex items-center justify-between border border-slate-700/60">
+          <div className="flex items-center gap-2">
+            <Bus className="w-4 h-4 text-amber-400" />
+            <span className="text-xs text-slate-300 font-semibold">Active Bus:</span>
+            <span className="font-mono text-xs font-black text-amber-300 bg-slate-900 px-2 py-0.5 rounded border border-amber-400/30">
+              {activeBusNumber}
+            </span>
+          </div>
+          {onChangeBus && (
+            <button
+              type="button"
+              id="switch-bus-btn"
+              onClick={onChangeBus}
+              className="text-[11px] font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer"
+            >
+              Switch Unit
+            </button>
+          )}
+        </div>
+
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2">
             <Camera className="w-5 h-5 text-amber-400" />

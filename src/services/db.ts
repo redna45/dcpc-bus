@@ -739,7 +739,8 @@ const recentVerificationsCache = new Map<string, { timestamp: number; result: Ve
 export async function verifyPassenger(
   passengerNumberOrQr: string,
   checkerUid: string,
-  checkerName: string
+  checkerName: string,
+  busNumber: string = 'BUS-01'
 ): Promise<VerificationResultData> {
   const rawInput = passengerNumberOrQr.trim();
   // Strip any prefix if scanner captured a URL or extra text
@@ -751,8 +752,10 @@ export async function verifyPassenger(
     }
   }
 
-  // Deduplicate rapid consecutive scans within 2 seconds for the same passenger by the same checker
-  const cacheKey = `${checkerUid}_${passengerNumber}`;
+  const assignedBus = busNumber.trim().toUpperCase() || 'BUS-01';
+
+  // Deduplicate rapid consecutive scans within 2 seconds for the same passenger by the same checker on same bus
+  const cacheKey = `${checkerUid}_${assignedBus}_${passengerNumber}`;
   const cached = recentVerificationsCache.get(cacheKey);
   const currentTime = Date.now();
   if (cached && currentTime - cached.timestamp < 2000) {
@@ -765,19 +768,23 @@ export async function verifyPassenger(
   if (!passenger) {
     // Log not found
     const logRef = doc(collection(db, 'verifications'));
-    await setDoc(logRef, {
+    const logEntry: VerificationLog = {
       id: logRef.id,
       passengerId: '',
       passengerNumber,
-      passengerName: 'Unknown',
+      passengerName: 'Unknown / Unregistered',
       checkerId: checkerUid,
       checkerName,
+      busNumber: assignedBus,
       result: 'passenger_not_found',
       timestamp: now,
-    });
+      notes: `Scanned on bus unit ${assignedBus}`,
+    };
+    await setDoc(logRef, logEntry);
 
     const res: VerificationResultData = {
       result: 'passenger_not_found',
+      busNumber: assignedBus,
       message: `No passenger registered with number ${passengerNumber}`,
     };
     recentVerificationsCache.set(cacheKey, { timestamp: currentTime, result: res });
@@ -790,23 +797,27 @@ export async function verifyPassenger(
 
   if (activeSub) {
     const logRef = doc(collection(db, 'verifications'));
-    await setDoc(logRef, {
+    const logEntry: VerificationLog = {
       id: logRef.id,
       passengerId: passenger.uid,
       passengerNumber: passenger.passengerNumber,
       passengerName: passenger.fullName,
       checkerId: checkerUid,
       checkerName,
+      busNumber: assignedBus,
       result: 'valid',
       timestamp: now,
       planName: activeSub.planNameSnapshot,
       expiryDate: activeSub.expiryDate,
-    });
+      notes: `Verified valid for ${activeSub.planNameSnapshot} on bus ${assignedBus}`,
+    };
+    await setDoc(logRef, logEntry);
 
     const res: VerificationResultData = {
       result: 'valid',
       passenger,
       subscription: activeSub,
+      busNumber: assignedBus,
     };
     recentVerificationsCache.set(cacheKey, { timestamp: currentTime, result: res });
     return res;
@@ -817,23 +828,27 @@ export async function verifyPassenger(
 
   if (expiredSub) {
     const logRef = doc(collection(db, 'verifications'));
-    await setDoc(logRef, {
+    const logEntry: VerificationLog = {
       id: logRef.id,
       passengerId: passenger.uid,
       passengerNumber: passenger.passengerNumber,
       passengerName: passenger.fullName,
       checkerId: checkerUid,
       checkerName,
+      busNumber: assignedBus,
       result: 'expired',
       timestamp: now,
       planName: expiredSub.planNameSnapshot,
       expiryDate: expiredSub.expiryDate,
-    });
+      notes: `Expired pass (${expiredSub.planNameSnapshot}) presented on bus ${assignedBus}`,
+    };
+    await setDoc(logRef, logEntry);
 
     const res: VerificationResultData = {
       result: 'expired',
       passenger,
       subscription: expiredSub,
+      busNumber: assignedBus,
       message: 'Subscription has expired',
     };
     recentVerificationsCache.set(cacheKey, { timestamp: currentTime, result: res });
@@ -842,20 +857,24 @@ export async function verifyPassenger(
 
   // No subscription at all
   const logRef = doc(collection(db, 'verifications'));
-  await setDoc(logRef, {
+  const logEntry: VerificationLog = {
     id: logRef.id,
     passengerId: passenger.uid,
     passengerNumber: passenger.passengerNumber,
     passengerName: passenger.fullName,
     checkerId: checkerUid,
     checkerName,
+    busNumber: assignedBus,
     result: 'no_active_subscription',
     timestamp: now,
-  });
+    notes: `No active pass enrolled on bus ${assignedBus}`,
+  };
+  await setDoc(logRef, logEntry);
 
   const res: VerificationResultData = {
     result: 'no_active_subscription',
     passenger,
+    busNumber: assignedBus,
     message: 'Passenger has no active subscription',
   };
   recentVerificationsCache.set(cacheKey, { timestamp: currentTime, result: res });
@@ -865,9 +884,9 @@ export async function verifyPassenger(
 export async function getVerificationLogs(checkerId?: string): Promise<VerificationLog[]> {
   try {
     const verifRef = collection(db, 'verifications');
-    let q = query(verifRef, orderBy('timestamp', 'desc'), limit(50));
+    let q = query(verifRef, orderBy('timestamp', 'desc'), limit(500));
     if (checkerId) {
-      q = query(verifRef, where('checkerId', '==', checkerId), limit(50));
+      q = query(verifRef, where('checkerId', '==', checkerId), limit(500));
     }
     const snap = await getDocs(q);
     const logs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as VerificationLog));
