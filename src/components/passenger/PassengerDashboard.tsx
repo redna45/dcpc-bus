@@ -24,6 +24,7 @@ import {
   getSubscriptionPlans,
   getPassengerPayments,
   getPassengerSubscriptions,
+  getPassengerCoverageSummary,
 } from '../../services/db';
 import { formatDate, getRemainingDays, isSubscriptionActive } from '../../lib/dateUtils';
 import { Badge } from '../common/Badge';
@@ -37,6 +38,12 @@ interface PassengerDashboardProps {
 export const PassengerDashboard: React.FC<PassengerDashboardProps> = ({ onNavigate }) => {
   const { userProfile } = useAuth();
   const [activeSub, setActiveSub] = useState<Subscription | null>(null);
+  const [coverageSummary, setCoverageSummary] = useState<{
+    activeSub: Subscription | null;
+    continuationSubs: Subscription[];
+    latestExpiryDate: string | null;
+    totalDaysLeft: number;
+  } | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [recentPayments, setRecentPayments] = useState<PaymentRecord[]>([]);
   const [historyCount, setHistoryCount] = useState(0);
@@ -50,16 +57,18 @@ export const PassengerDashboard: React.FC<PassengerDashboardProps> = ({ onNaviga
     const loadData = async () => {
       setLoading(true);
       try {
-        const [sub, allPlans, payments, allSubs] = await Promise.all([
+        const [sub, allPlans, payments, allSubs, cov] = await Promise.all([
           getPassengerActiveSubscription(userProfile.uid),
           getSubscriptionPlans(true),
           getPassengerPayments(userProfile.uid),
           getPassengerSubscriptions(userProfile.uid),
+          getPassengerCoverageSummary(userProfile.uid),
         ]);
         setActiveSub(sub);
         setPlans(allPlans);
         setRecentPayments(payments.slice(0, 3));
         setHistoryCount(allSubs.length);
+        setCoverageSummary(cov);
       } catch (err) {
         console.error('Error loading passenger dashboard data:', err);
       } finally {
@@ -277,6 +286,45 @@ export const PassengerDashboard: React.FC<PassengerDashboardProps> = ({ onNaviga
                   <span className="font-bold text-slate-800">{formatDate(activeSub.expiryDate)}</span>
                 </div>
               </div>
+
+              {/* Queued Continuation Subscriptions Display */}
+              {coverageSummary && coverageSummary.continuationSubs.length > 0 && (
+                <div className="bg-emerald-50/90 border border-emerald-300 rounded-2xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+                        🔄 Upcoming Continuation Pass
+                      </span>
+                      <span className="bg-emerald-200 text-emerald-900 text-[10px] font-black px-2 py-0.5 rounded-full">
+                        QUEUED RENEWAL
+                      </span>
+                    </div>
+                    <span className="font-mono text-xs font-black text-emerald-800 bg-white px-2 py-1 rounded-lg border border-emerald-200 shadow-2xs">
+                      Total {coverageSummary.totalDaysLeft} Days Unli-Rides
+                    </span>
+                  </div>
+                  {coverageSummary.continuationSubs.map((sub) => (
+                    <div
+                      key={sub.id}
+                      className="bg-white/80 border border-emerald-200/80 rounded-xl p-3 flex items-center justify-between text-xs"
+                    >
+                      <div>
+                        <h5 className="font-black text-slate-900">{sub.planNameSnapshot}</h5>
+                        <p className="text-[11px] text-emerald-800">
+                          Automatically begins on <strong>{formatDate(sub.startDate)}</strong>
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[10px] text-slate-400 font-bold block">Valid Until</span>
+                        <span className="font-bold text-slate-800">{formatDate(sub.expiryDate)}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <p className="text-[10px] text-emerald-700 font-medium italic">
+                    ✓ Your new pass will seamlessly take effect the moment your current pass expires — no lost days!
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-7 space-y-3 bg-slate-50/70 rounded-2xl border border-dashed border-slate-200">

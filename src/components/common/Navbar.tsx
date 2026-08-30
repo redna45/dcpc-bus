@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   QrCode,
@@ -17,11 +17,13 @@ import {
   Layers,
   MapPin,
   Ticket,
+  Globe,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
 import { BRANDING } from '../../constants/branding';
 import { Logo } from './Logo';
+import { getPhilippineCurrentDateTimeString } from '../../lib/dateUtils';
 
 interface NavbarProps {
   currentView: string;
@@ -37,6 +39,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { userProfile, activeRole, isAdmin, logout, switchRoleForDemo } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
+  const [phtTime, setPhtTime] = useState(getPhilippineCurrentDateTimeString());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPhtTime(getPhilippineCurrentDateTimeString());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   if (!userProfile) return null;
 
@@ -159,8 +169,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               })}
             </nav>
 
-            {/* Right Actions: Admin Switcher & User Profile */}
+            {/* Right Actions: Clock, Admin Switcher & User Profile */}
             <div className="flex items-center gap-2">
+              {/* Live Philippine Time Badge (Hidden on very narrow mobile screens, visible on sm and above) */}
+              <div
+                id="philippine-time-badge"
+                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 bg-slate-100/90 border border-slate-200 text-slate-700 rounded-xl text-[11px] font-mono font-bold shadow-2xs"
+                title="Philippine Standard Time (PST / PHT, Asia/Manila, UTC+8)"
+              >
+                <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-sans font-extrabold px-1 py-0.2 rounded">
+                  PHT
+                </span>
+                <span className="truncate max-w-[210px]">{phtTime}</span>
+              </div>
+
               {/* Admin Mode Switcher */}
               {isAdmin && (
                 <div className="relative">

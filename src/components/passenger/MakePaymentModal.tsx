@@ -98,8 +98,11 @@ export const MakePaymentModal: React.FC<MakePaymentModalProps> = ({
             <p className="text-xs text-slate-300">
               Valid for {plan.durationDays} {plan.durationDays === 1 ? 'day' : 'days'} unli-rides across DCPC routes
             </p>
+            <p className="text-[11px] text-emerald-300 mt-1 font-semibold flex items-center gap-1">
+              <span>🔄</span> Seamless Extension: If you have an active pass, the new duration extends from your current expiration date!
+            </p>
           </div>
-          <div className="text-right">
+          <div className="text-right shrink-0 ml-3">
             <span className="text-[11px] text-slate-400 block font-semibold">Total Amount</span>
             <span className="text-xl font-black text-emerald-400 font-mono">
               ₱{plan.price.toLocaleString()}

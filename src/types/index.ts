@@ -104,6 +104,8 @@ export interface VerificationResultData {
   result: VerificationResultType;
   passenger?: UserProfile;
   subscription?: Subscription;
+  continuationSubscription?: Subscription;
+  totalCoverageDaysLeft?: number;
   busNumber?: string;
   message?: string;
 }

@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Search, User, CreditCard, Banknote, CheckCircle, AlertCircle, ShoppingBag } from 'lucide-react';
+import { Search, User, CreditCard, Banknote, CheckCircle, AlertCircle, ShoppingBag, RotateCcw, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Modal } from '../common/Modal';
-import { UserProfile, SubscriptionPlan, PaymentMethod } from '../../types';
+import { UserProfile, SubscriptionPlan, PaymentMethod, Subscription } from '../../types';
 import {
   searchPassengers,
   getSubscriptionPlans,
   sellSubscriptionManually,
   findPassengerByNumber,
+  getPassengerCoverageSummary,
 } from '../../services/db';
 import { useAuth } from '../../context/AuthContext';
-import { formatCurrency } from '../../lib/dateUtils';
+import { formatCurrency, formatDate, calculateExpiryDate } from '../../lib/dateUtils';
 
 interface SellSubscriptionModalProps {
   isOpen: boolean;
@@ -37,6 +38,14 @@ export const SellSubscriptionModal: React.FC<SellSubscriptionModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Active pass continuation details
+  const [passengerCoverage, setPassengerCoverage] = useState<{
+    activeSub: Subscription | null;
+    continuationSubs: Subscription[];
+    latestExpiryDate: string | null;
+    totalDaysLeft: number;
+  } | null>(null);
+
   useEffect(() => {
     getSubscriptionPlans(true).then((p) => {
       setPlans(p);
@@ -49,6 +58,15 @@ export const SellSubscriptionModal: React.FC<SellSubscriptionModalProps> = ({
       setSelectedPassenger(initialPassenger);
     }
   }, [initialPassenger]);
+
+  // Load coverage info when passenger changes
+  useEffect(() => {
+    if (selectedPassenger) {
+      getPassengerCoverageSummary(selectedPassenger.uid).then(setPassengerCoverage);
+    } else {
+      setPassengerCoverage(null);
+    }
+  }, [selectedPassenger]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -240,6 +258,34 @@ export const SellSubscriptionModal: React.FC<SellSubscriptionModalProps> = ({
               </label>
             ))}
           </div>
+
+          {/* Active Card Continuation Alert */}
+          {selectedPassenger && passengerCoverage && passengerCoverage.latestExpiryDate && selectedPlan && (
+            <div className="bg-amber-50/90 border border-amber-300 rounded-xl p-3 flex items-start gap-2.5 text-xs text-amber-900 animate-in fade-in">
+              <RotateCcw className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-amber-950 uppercase text-[11px] tracking-wide">
+                    🔄 Active Card Continuation Detected
+                  </span>
+                  <span className="bg-amber-200/80 text-amber-900 text-[10px] font-black px-2 py-0.5 rounded-full">
+                    {passengerCoverage.totalDaysLeft} Days Remaining
+                  </span>
+                </div>
+                <p className="text-amber-800 text-[11px] leading-relaxed">
+                  Passenger currently has active pass coverage until{' '}
+                  <strong>{formatDate(passengerCoverage.latestExpiryDate)}</strong>.
+                  Activating this {selectedPlan.name} will seamlessly stack from that date, extending total coverage until{' '}
+                  <strong className="text-amber-950 underline decoration-amber-400">
+                    {formatDate(
+                      calculateExpiryDate(passengerCoverage.latestExpiryDate, selectedPlan.durationDays)
+                    )}
+                  </strong>{' '}
+                  (+{selectedPlan.durationDays} days).
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Step 3: Payment Method & Notes */}

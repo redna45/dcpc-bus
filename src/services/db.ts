@@ -34,7 +34,15 @@ import {
   PaymentMethod,
   UserRole,
 } from '../types';
-import { calculateExpiryDate, isSubscriptionActive } from '../lib/dateUtils';
+import {
+  calculateExpiryDate,
+  calculateContinuationDates,
+  isSubscriptionActive,
+  isSubscriptionQueued,
+  isSubscriptionValidOrQueued,
+  formatDate,
+  getRemainingDays,
+} from '../lib/dateUtils';
 
 // ==========================================
 // DESIGNATED ID GENERATION (PAS/CSH/CHK/ADM)
@@ -520,6 +528,27 @@ export async function getPassengerPayments(passengerId: string): Promise<Payment
   }
 }
 
+// ==========================================
+// CONTINUATION EXTENSION HELPERS
+// ==========================================
+export function getPassengerLatestActiveExpiry(subscriptions: Subscription[]): string | null {
+  const now = Date.now();
+  // Filter active subscriptions that have not expired yet
+  const validSubs = subscriptions.filter(
+    (s) => s.status === 'active' && s.expiryDate && new Date(s.expiryDate).getTime() > now
+  );
+  if (validSubs.length === 0) return null;
+
+  // Find the latest expiry date among all valid/queued passes
+  let latestExpiry = validSubs[0].expiryDate;
+  for (const s of validSubs) {
+    if (new Date(s.expiryDate).getTime() > new Date(latestExpiry).getTime()) {
+      latestExpiry = s.expiryDate;
+    }
+  }
+  return latestExpiry;
+}
+
 export async function approvePayment(
   paymentId: string,
   reviewerUid: string,
@@ -539,8 +568,13 @@ export async function approvePayment(
     throw new Error(`Payment is already ${payment.status}`);
   }
 
-  const startDate = now;
-  const expiryDate = calculateExpiryDate(startDate, planDurationDays);
+  // Check if passenger already has an active card to seamlessly continue from!
+  const passengerSubs = await getPassengerSubscriptions(payment.passengerId);
+  const latestActiveExpiry = getPassengerLatestActiveExpiry(passengerSubs);
+  const { startDate, expiryDate, isContinuation } = calculateContinuationDates(
+    latestActiveExpiry,
+    planDurationDays
+  );
 
   // Update payment status
   await updateDoc(paymentRef, {
@@ -548,6 +582,10 @@ export async function approvePayment(
     reviewedAt: now,
     reviewedBy: `${reviewerName} (${reviewerUid})`,
   });
+
+  const notes = isContinuation
+    ? `Approved via GCash (Continuation pass extended from ${formatDate(latestActiveExpiry)})`
+    : 'Approved via GCash verification';
 
   // Find associated subscription or create new one
   const subQuery = query(collection(db, 'subscriptions'), where('paymentId', '==', paymentId));
@@ -561,7 +599,7 @@ export async function approvePayment(
       expiryDate,
       approvedAt: now,
       approvedBy: `${reviewerName} (${reviewerUid})`,
-      notes: 'Approved via GCash verification',
+      notes,
     });
   } else {
     const newSubRef = doc(collection(db, 'subscriptions'));
@@ -581,7 +619,7 @@ export async function approvePayment(
       createdAt: now,
       approvedAt: now,
       approvedBy: `${reviewerName} (${reviewerUid})`,
-      notes: 'Approved via GCash verification',
+      notes,
     });
   }
 }
@@ -636,8 +674,29 @@ export async function sellSubscriptionManually(data: {
   customStartDate?: string;
 }): Promise<Subscription> {
   const now = new Date().toISOString();
-  const startDate = data.customStartDate || now;
-  const expiryDate = calculateExpiryDate(startDate, data.plan.durationDays);
+
+  // Check if passenger already has an active card to seamlessly continue from!
+  let startDate: string;
+  let expiryDate: string;
+  let isContinuation = false;
+  let previousExpiry: string | undefined;
+
+  if (data.customStartDate) {
+    startDate = data.customStartDate;
+    expiryDate = calculateExpiryDate(startDate, data.plan.durationDays);
+  } else {
+    const passengerSubs = await getPassengerSubscriptions(data.passenger.uid);
+    const latestActiveExpiry = getPassengerLatestActiveExpiry(passengerSubs);
+    const res = calculateContinuationDates(latestActiveExpiry, data.plan.durationDays);
+    startDate = res.startDate;
+    expiryDate = res.expiryDate;
+    isContinuation = res.isContinuation;
+    previousExpiry = res.previousExpiry;
+  }
+
+  const subNotes = isContinuation
+    ? `${data.notes ? data.notes + ' • ' : ''}Continuation pass (Extends validity from ${formatDate(previousExpiry)})`
+    : data.notes || `Manual sale via ${data.paymentMethod}`;
 
   const subRef = doc(collection(db, 'subscriptions'));
   const subscription: Subscription = {
@@ -656,7 +715,7 @@ export async function sellSubscriptionManually(data: {
     approvedAt: now,
     approvedBy: `${data.creatorName} (${data.creatorUid})`,
     createdBy: `${data.creatorName} (${data.creatorUid})`,
-    notes: data.notes || `Manual sale via ${data.paymentMethod}`,
+    notes: subNotes,
   };
 
   await setDoc(subRef, subscription);
@@ -683,7 +742,7 @@ export async function sellSubscriptionManually(data: {
 }
 
 // ==========================================
-// SUBSCRIPTIONS RETRIEVAL
+// SUBSCRIPTIONS RETRIEVAL & CONTINUATION DETAILS
 // ==========================================
 export async function getPassengerActiveSubscription(passengerId: string): Promise<Subscription | null> {
   try {
@@ -694,18 +753,54 @@ export async function getPassengerActiveSubscription(passengerId: string): Promi
     const snapshot = await getDocs(q);
     const subscriptions = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as Subscription));
 
-    // Find the latest active subscription that hasn't expired
-    const activeSubs = subscriptions.filter(isSubscriptionActive);
-    if (activeSubs.length > 0) {
-      // Sort by latest expiry date
-      activeSubs.sort((a, b) => new Date(b.expiryDate).getTime() - new Date(a.expiryDate).getTime());
-      return activeSubs[0];
+    // Find the currently active subscription (now is between start and expiry)
+    const currentActiveSubs = subscriptions.filter(isSubscriptionActive);
+    if (currentActiveSubs.length > 0) {
+      currentActiveSubs.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+      return currentActiveSubs[0];
+    }
+
+    // If none currently active, check if there are future-queued continuation subscriptions
+    const futureQueuedSubs = subscriptions.filter(isSubscriptionQueued);
+    if (futureQueuedSubs.length > 0) {
+      futureQueuedSubs.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+      return futureQueuedSubs[0];
     }
 
     return null;
   } catch (error) {
     console.error('Error fetching active subscription:', error);
     return null;
+  }
+}
+
+export async function getPassengerCoverageSummary(passengerId: string): Promise<{
+  activeSub: Subscription | null;
+  continuationSubs: Subscription[];
+  latestExpiryDate: string | null;
+  totalDaysLeft: number;
+}> {
+  try {
+    const subscriptions = await getPassengerSubscriptions(passengerId);
+    const activeSub = subscriptions.find(isSubscriptionActive) || null;
+    const continuationSubs = subscriptions.filter(isSubscriptionQueued);
+    const latestExpiry = getPassengerLatestActiveExpiry(subscriptions);
+    const totalDaysLeft = latestExpiry ? getRemainingDays(latestExpiry) : 0;
+
+    return {
+      activeSub,
+      continuationSubs,
+      latestExpiryDate: latestExpiry,
+      totalDaysLeft,
+    };
+  } catch (err) {
+    console.error('Error getting coverage summary:', err);
+    return {
+      activeSub: null,
+      continuationSubs: [],
+      latestExpiryDate: null,
+      totalDaysLeft: 0,
+    };
   }
 }
 
@@ -795,9 +890,13 @@ export async function verifyPassenger(
   // Get passenger subscriptions
   const allSubs = await getPassengerSubscriptions(passenger.uid);
   const activeSub = allSubs.find(isSubscriptionActive);
+  const continuationSubs = allSubs.filter(isSubscriptionQueued);
+  const latestExpiry = getPassengerLatestActiveExpiry(allSubs);
+  const totalCoverageDaysLeft = latestExpiry ? getRemainingDays(latestExpiry) : 0;
 
   if (activeSub) {
     const logRef = doc(collection(db, 'verifications'));
+    const hasContinuation = continuationSubs.length > 0;
     const logEntry: VerificationLog = {
       id: logRef.id,
       passengerId: passenger.uid,
@@ -809,8 +908,10 @@ export async function verifyPassenger(
       result: 'valid',
       timestamp: now,
       planName: activeSub.planNameSnapshot,
-      expiryDate: activeSub.expiryDate,
-      notes: `Verified valid for ${activeSub.planNameSnapshot} on bus ${assignedBus}`,
+      expiryDate: latestExpiry || activeSub.expiryDate,
+      notes: hasContinuation
+        ? `Verified valid for ${activeSub.planNameSnapshot} on bus ${assignedBus} (+${continuationSubs.length} continuation pass queued, total ${totalCoverageDaysLeft} days coverage)`
+        : `Verified valid for ${activeSub.planNameSnapshot} on bus ${assignedBus}`,
     };
     await setDoc(logRef, logEntry);
 
@@ -818,6 +919,39 @@ export async function verifyPassenger(
       result: 'valid',
       passenger,
       subscription: activeSub,
+      continuationSubscription: continuationSubs[0] || undefined,
+      totalCoverageDaysLeft,
+      busNumber: assignedBus,
+    };
+    recentVerificationsCache.set(cacheKey, { timestamp: currentTime, result: res });
+    return res;
+  }
+
+  // If no subscription is currently running, check if they have a future queued subscription
+  if (continuationSubs.length > 0) {
+    const nextSub = continuationSubs[0];
+    const logRef = doc(collection(db, 'verifications'));
+    const logEntry: VerificationLog = {
+      id: logRef.id,
+      passengerId: passenger.uid,
+      passengerNumber: passenger.passengerNumber,
+      passengerName: passenger.fullName,
+      checkerId: checkerUid,
+      checkerName,
+      busNumber: assignedBus,
+      result: 'valid',
+      timestamp: now,
+      planName: nextSub.planNameSnapshot,
+      expiryDate: nextSub.expiryDate,
+      notes: `Queued continuation pass valid on bus ${assignedBus}`,
+    };
+    await setDoc(logRef, logEntry);
+
+    const res: VerificationResultData = {
+      result: 'valid',
+      passenger,
+      subscription: nextSub,
+      totalCoverageDaysLeft,
       busNumber: assignedBus,
     };
     recentVerificationsCache.set(cacheKey, { timestamp: currentTime, result: res });

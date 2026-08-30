@@ -162,7 +162,7 @@ export const VerificationResultCard: React.FC<VerificationResultCardProps> = ({
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400">Plan</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400">Current Pass</span>
                   <p className="text-sm font-black text-slate-900">{subscription.planNameSnapshot}</p>
                 </div>
                 {result === 'valid' && (
@@ -188,6 +188,27 @@ export const VerificationResultCard: React.FC<VerificationResultCardProps> = ({
                   </span>
                 </div>
               </div>
+
+              {/* Continuation Pass Extension Info if Present */}
+              {data.continuationSubscription && (
+                <div className="mt-2 pt-2 border-t border-emerald-200/60 bg-emerald-100/50 p-2.5 rounded-xl text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-black text-emerald-800">
+                      🔄 Continuation Pass Queued
+                    </span>
+                    <span className="font-mono text-[11px] font-black text-emerald-900 bg-emerald-200/70 px-1.5 py-0.5 rounded">
+                      Total {data.totalCoverageDaysLeft || daysLeft} Days Coverage
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-emerald-950">
+                    {data.continuationSubscription.planNameSnapshot}
+                  </p>
+                  <p className="text-[10px] text-emerald-800">
+                    Continues from {formatDate(data.continuationSubscription.startDate)} until{' '}
+                    <strong>{formatDate(data.continuationSubscription.expiryDate)}</strong>
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-500">
