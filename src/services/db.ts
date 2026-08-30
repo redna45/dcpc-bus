@@ -6,6 +6,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  writeBatch,
   query,
   where,
   orderBy,
@@ -884,9 +885,9 @@ export async function verifyPassenger(
 export async function getVerificationLogs(checkerId?: string): Promise<VerificationLog[]> {
   try {
     const verifRef = collection(db, 'verifications');
-    let q = query(verifRef, orderBy('timestamp', 'desc'), limit(500));
+    let q = query(verifRef, orderBy('timestamp', 'desc'), limit(1000));
     if (checkerId) {
-      q = query(verifRef, where('checkerId', '==', checkerId), limit(500));
+      q = query(verifRef, where('checkerId', '==', checkerId), limit(1000));
     }
     const snap = await getDocs(q);
     const logs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as VerificationLog));
@@ -895,6 +896,44 @@ export async function getVerificationLogs(checkerId?: string): Promise<Verificat
     const snap = await getDocs(collection(db, 'verifications'));
     const logs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as VerificationLog));
     return logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+}
+
+/**
+ * Permanently deletes all verification scan logs from Firestore and clears memory cache.
+ * Resets total scans, valid boardings, and no active pass counters to 0.
+ */
+export async function clearAllVerificationLogs(): Promise<{ success: boolean; deletedCount: number }> {
+  try {
+    // 1. Clear in-memory deduplication cache
+    recentVerificationsCache.clear();
+
+    // 2. Fetch all verification records from Firestore
+    const verifRef = collection(db, 'verifications');
+    const snap = await getDocs(verifRef);
+    
+    if (snap.empty) {
+      return { success: true, deletedCount: 0 };
+    }
+
+    const docs = snap.docs;
+    let deletedCount = 0;
+
+    // 3. Delete in batches of up to 400 documents (Firestore batch limit is 500)
+    for (let i = 0; i < docs.length; i += 400) {
+      const chunk = docs.slice(i, i + 400);
+      const batch = writeBatch(db);
+      for (const docSnap of chunk) {
+        batch.delete(docSnap.ref);
+      }
+      await batch.commit();
+      deletedCount += chunk.length;
+    }
+
+    return { success: true, deletedCount };
+  } catch (error) {
+    console.error('Error clearing verification logs:', error);
+    throw error;
   }
 }
 

@@ -17,6 +17,7 @@ import {
   getGCashSettings,
   updateGCashSettings,
   restoreFactorySettings,
+  clearAllVerificationLogs,
 } from '../../services/db';
 import { useAuth } from '../../context/AuthContext';
 import { Modal } from '../common/Modal';
@@ -57,6 +58,27 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onSaved }) => {
     deletedPlansCount: number;
     errors: string[];
   } | null>(null);
+
+  // Scan Logs Reset state
+  const [isClearingScanLogs, setIsClearingScanLogs] = useState(false);
+  const [scanLogsClearSuccess, setScanLogsClearSuccess] = useState<string | null>(null);
+
+  const handleClearScanLogsOnly = async () => {
+    if (!window.confirm('Are you sure you want to delete all verification scan logs and reset total scans, valid boardings, and no-active-pass counters to 0? This keeps users, plans, and subscriptions intact.')) {
+      return;
+    }
+    setIsClearingScanLogs(true);
+    try {
+      const res = await clearAllVerificationLogs();
+      setScanLogsClearSuccess(`Successfully purged ${res.deletedCount} scan audit records from Firebase. Scan counters are reset to 0.`);
+      setTimeout(() => setScanLogsClearSuccess(null), 6000);
+    } catch (err: any) {
+      console.error('Error clearing scan logs:', err);
+      alert('Failed to clear scan logs: ' + err.message);
+    } finally {
+      setIsClearingScanLogs(false);
+    }
+  };
 
   useEffect(() => {
     Promise.all([getCompanySettings(), getGCashSettings()]).then(([comp, gcash]) => {
@@ -296,7 +318,46 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onSaved }) => {
         </div>
       </form>
 
-      {/* 3. Factory Reset & Danger Zone */}
+      {/* 3. Scan Logs & Testing Reset */}
+      <div className="bg-amber-50/50 rounded-3xl p-6 border border-amber-200 shadow-xs space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b border-amber-200">
+          <RotateCcw className="w-5 h-5 text-amber-600" />
+          <div>
+            <h3 className="text-sm font-bold text-amber-950 uppercase tracking-wider">
+              Testing & Audit Memory: Reset Scan Logs
+            </h3>
+            <p className="text-xs text-amber-700">
+              Clear all QR scan events and reset valid boarding counters to 0 while keeping passenger accounts intact.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 p-4 rounded-2xl border border-amber-100">
+          <div className="space-y-1 text-xs text-slate-600">
+            <p className="font-bold text-slate-800">Clear verification records from Firebase Firestore</p>
+            <p>Resets Total Scans, Valid Boarding count, Expired Passes, and No Active Pass counters back to 0.</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleClearScanLogsOnly}
+            disabled={isClearingScanLogs}
+            className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-xs font-black shadow-xs transition cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{isClearingScanLogs ? 'Clearing Scan Logs...' : 'Reset Scan Counters to 0'}</span>
+          </button>
+        </div>
+
+        {scanLogsClearSuccess && (
+          <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs font-bold flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{scanLogsClearSuccess}</span>
+          </div>
+        )}
+      </div>
+
+      {/* 4. Factory Reset & Danger Zone */}
       <div className="bg-rose-50/50 rounded-3xl p-6 border border-rose-200 shadow-xs space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b border-rose-200">
           <ShieldAlert className="w-5 h-5 text-rose-600" />

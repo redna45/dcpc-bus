@@ -22,9 +22,11 @@ import {
   BarChart3,
   Clock,
   Layers,
+  Trash2,
+  RotateCcw,
 } from 'lucide-react';
 import { VerificationLog, UserProfile } from '../../types';
-import { getVerificationLogs, getPassengers } from '../../services/db';
+import { getVerificationLogs, getPassengers, clearAllVerificationLogs } from '../../services/db';
 import { formatDateTime, formatDate, getRemainingDays } from '../../lib/dateUtils';
 import { Badge } from '../common/Badge';
 import { BRANDING } from '../../constants/branding';
@@ -52,6 +54,11 @@ export const VerificationLogsView: React.FC = () => {
   // Modal Inspection State
   const [selectedLog, setSelectedLog] = useState<VerificationLog | null>(null);
 
+  // Clear / Reset to 0 State
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -65,6 +72,24 @@ export const VerificationLogsView: React.FC = () => {
       console.error('Error fetching verification logs:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetAllLogs = async () => {
+    setIsClearing(true);
+    try {
+      const res = await clearAllVerificationLogs();
+      setLogs([]);
+      setShowResetModal(false);
+      setResetSuccessMessage(
+        `Memory cleared! Successfully deleted ${res.deletedCount} scan records from Firebase Firestore. Total scans, valid boardings, and no-active-pass counters are now reset to 0.`
+      );
+      setTimeout(() => setResetSuccessMessage(null), 8000);
+    } catch (err) {
+      console.error('Failed to clear logs:', err);
+      alert('Error clearing verification logs: ' + (err as Error).message);
+    } finally {
+      setIsClearing(false);
     }
   };
 
@@ -374,6 +399,17 @@ export const VerificationLogsView: React.FC = () => {
 
         <div className="flex flex-wrap items-center gap-2.5">
           <button
+            id="reset-scan-logs-btn"
+            onClick={() => setShowResetModal(true)}
+            disabled={logs.length === 0 || isClearing}
+            className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 disabled:opacity-40 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+            title="Reset total scans, valid boardings, and no active pass to 0 and clear from Firestore memory"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+            <span>Reset & Clear to 0</span>
+          </button>
+
+          <button
             id="export-scan-logs-csv-btn"
             onClick={exportToCSV}
             disabled={filteredLogs.length === 0}
@@ -392,6 +428,22 @@ export const VerificationLogsView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Reset Success Message Banner */}
+      {resetSuccessMessage && (
+        <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-2xl flex items-center justify-between text-emerald-900 text-xs font-bold shadow-sm animate-in fade-in">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>{resetSuccessMessage}</span>
+          </div>
+          <button
+            onClick={() => setResetSuccessMessage(null)}
+            className="p-1 text-emerald-700 hover:text-emerald-900 rounded-lg hover:bg-emerald-100"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* KPI Metrics Summary Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
@@ -1030,6 +1082,74 @@ export const VerificationLogsView: React.FC = () => {
             >
               Close Details
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* RESET & CLEAR TO 0 CONFIRMATION MODAL */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border-2 border-rose-200 space-y-5 animate-in zoom-in-95">
+            {/* Header */}
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center font-black shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-900 tracking-tight">
+                  Reset Scans & Clear Memory
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Start fresh from 0 for live testing
+                </p>
+              </div>
+            </div>
+
+            {/* Warning details */}
+            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl space-y-2 text-xs text-rose-900">
+              <p className="font-bold">
+                Are you sure you want to permanently delete all {logs.length} scan records?
+              </p>
+              <ul className="list-disc pl-4 space-y-1 text-rose-800 font-medium">
+                <li>Total Scans will reset to <strong>0</strong></li>
+                <li>Valid Boarding count will reset to <strong>0</strong></li>
+                <li>No Active Pass & Expired Pass counts will reset to <strong>0</strong></li>
+                <li>Verification documents in Firebase Firestore will be completely wiped</li>
+                <li>In-memory duplicate scan prevention cache will be cleared</li>
+              </ul>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowResetModal(false)}
+                disabled={isClearing}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                id="confirm-reset-scans-btn"
+                onClick={handleResetAllLogs}
+                disabled={isClearing}
+                className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {isClearing ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Deleting & Clearing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Confirm Reset to 0</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
